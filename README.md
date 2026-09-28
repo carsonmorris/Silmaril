@@ -6,8 +6,6 @@ The project combines orbital mechanics, public spaceflight data, backend develop
 
 > *"The Silmarils were three great jewels, created by Fëanor in the Years of the Trees, which captured the light of the Two Trees of Valinor."*
 
-The name is a nod to the Silmarils' association with light and the heavens, while the project itself focuses on tracking objects that actually orbit Earth.
-
 ---
 
 ## Project Goals
@@ -16,17 +14,17 @@ The goal of Silmaril is to build a complete satellite tracking system from the g
 
 The project will:
 
-* Retrieve publicly available satellite orbital data
-* Parse and maintain satellite orbital elements
-* Propagate satellite orbits using the SGP4 model
-* Calculate satellite positions and velocities
-* Convert orbital coordinates into latitude, longitude, and altitude
-* Store satellite data in a searchable database
-* Provide a REST API for satellite information and calculations
-* Display satellites on an interactive map
-* Visualize satellite orbits around a 3D Earth
-* Calculate satellite visibility and upcoming passes for an observer
-* Provide tools for exploring and searching the satellite catalog
+* Retrieve publicly available satellite orbital data (COMING SOON)
+* Parse and maintain satellite orbital elements (COMING SOON)
+* Propagate satellite orbits using the SGP4 model (COMING SOON)
+* Calculate satellite positions and velocities (COMING SOON)
+* Convert orbital coordinates into latitude, longitude, and altitude (COMING SOON)
+* Store satellite data in a searchable database (COMING SOON)
+* Provide a REST API for satellite information and calculations (COMING SOON)
+* Display satellites on an interactive map (COMING SOON)
+* Visualize satellite orbits around a 3D Earth (COMING SOON)
+* Calculate satellite visibility and upcoming passes for an observer (COMING SOON)
+* Provide tools for exploring and searching the satellite catalog (COMING SOON)
 
 ---
 
