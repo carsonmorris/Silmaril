@@ -7,6 +7,15 @@ The project combines orbital mechanics, public spaceflight data, backend develop
 > *"The Silmarils were three great jewels, created by Fëanor in the Years of the Trees, which captured the light of the Two Trees of Valinor."*
 
 ---
+# Project Status
+
+🚧 **Early Development**
+
+The project is currently in the planning and architecture stage.
+
+The first milestone is to retrieve real satellite orbital data, parse it correctly, and calculate satellite positions using SGP4.
+
+---
 
 ## Project Goals
 
@@ -549,15 +558,6 @@ The name also leaves room for the project to grow beyond simple satellite tracki
 
 ---
 
-# Project Status
-
-🚧 **Early Development**
-
-The project is currently in the planning and architecture stage.
-
-The first milestone is to retrieve real satellite orbital data, parse it correctly, and calculate satellite positions using SGP4.
-
----
 
 # Long-Term Goal
 
