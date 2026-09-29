@@ -45,4 +45,4 @@ def propagate_satellite(satellite, time):
         raise ValueError(f"Error occurred while propagating satellite: {SGP4_ERRORS[error]}")
     
     # Return position xyz and velocity xyz in terms of TEME: True Equator, Mean Equinox. A Cartesian Earth-centered coordinate
-    return position, velocity, time
+    return position, velocity

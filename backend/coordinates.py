@@ -2,11 +2,12 @@
 # September 29, 2026
 # Coordinates Conversion Functions
 # Convert SGP4 positions from Earth-centered inertial (ECI) coords
-# to lat/lon/alt coordinates
+# to lat/lon/alt coordinates. Just using the equations on google
 
 from sgp4.api import jday
-from math import sin, cos, pi
+from math import degrees, sin, cos, pi, sqrt, atan2
 from datetime import timezone
+
 
 # Convert TEME (True Equator, Mean Equinox) coordinates to ECEF (Earth-Centered, Earth-Fixed) coordinates
 def teme_to_ecef(position_teme, time):
@@ -59,5 +60,51 @@ def teme_to_ecef(position_teme, time):
 
 # Convert ECEF coordinates to geodetic (latitude, longitude, altitude)
 def ecef_to_geodetic(position_ecef):
-    # Placeholder for geodetic conversion logic
-    pass
+    # WGS84 ellipsoid parameters
+    a = 6378.137 # Semi-major axis (km)
+    f = 1 / 298.257223563 # Flattening
+    e2 = f * (2 - f) # First eccentricity squared
+
+    # Extract ECEF position
+    x, y, z = position_ecef
+
+    # Calculate longitude
+    longitude = atan2(y, x)
+
+    # Distance from Earth's rotational axis
+    p = sqrt(x**2 + y**2)
+
+    # Initial latitude estimate
+    latitude = atan2(z, p * (1 - e2))
+
+    # Iterate until latitude converges
+    for x in range(10):
+
+        # Radius of curvature in the prime vertical
+        N = a / sqrt(1 - e2 * sin(latitude)**2)
+
+        # Calculate altitude
+        altitude = p / cos(latitude) - N
+
+        # Calculate a new latitude
+        new_latitude = atan2(
+            z,
+            p * (1 - e2 * N / (N + altitude))
+        )
+
+        # Stop if latitude has converged
+        if abs(new_latitude - latitude) < 1e-12:
+            latitude = new_latitude
+            break
+
+        latitude = new_latitude
+
+    # Recalculate N and altitude using final latitude
+    N = a / sqrt(1 - e2 * sin(latitude)**2)
+    altitude = p / cos(latitude) - N
+
+    # Convert radians to degrees
+    latitude = degrees(latitude)
+    longitude = degrees(longitude)
+
+    return latitude, longitude, altitude

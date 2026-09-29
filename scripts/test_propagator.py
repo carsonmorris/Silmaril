@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 
 from backend.propagator import propagate_satellite, create_satrec
 from data.satellite_data import get_satellite_data
@@ -25,7 +25,7 @@ times = {
 
 
 for label, when in times.items():
-    time, position, velocity = propagate_satellite(
+    position, velocity = propagate_satellite(
         satellite,
         when
     )

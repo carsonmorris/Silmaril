@@ -10,13 +10,13 @@ The project is being built from the ground up to explore orbital mechanics, sate
 
 🚧 **Early Development**
 
-Retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions. 
+We can now retrieve and process satellite orbital data, calculate its positions and velocities with SGP4, and convert these values into latitude, longitude and altitude! Verified against https://www.astroviewer.net/iss/en/
 
 ## Goals
 
 * Retrieve and process satellite orbital data ✓
 * Calculate satellite positions and velocities ✓
-* Convert orbital coordinates to latitude, longitude, and altitude
+* Convert orbital coordinates to latitude, longitude, and altitude ✓
 * Store satellite data in a database
 * Provide a REST API
 * Build an interactive satellite map
@@ -209,6 +209,8 @@ h = \frac{p}{\cos(\phi)} - N
 $$
 
 until the latitude converges.
+
+Latitude is calculated iteratively because Earth is an ellipsoid, meaning latitude and altitude are interdependent. The calculation starts with an estimated latitude, uses it to estimate the satellite's altitude, then uses that altitude to calculate a more accurate latitude. This process repeats until the change between iterations becomes negligible, indicating that the latitude has converged.
 
 ### Reference Models
 
