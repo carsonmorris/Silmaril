@@ -154,7 +154,7 @@ $$
 \frac{T^3}{38710000}
 $$
 
-Normalize $\theta$ to $0^\circ$–$360^\circ$ and convert to radians.
+Normalize $\theta$ to $0^\circ$ – $360^\circ$ and convert to radians.
 
 Then rotate TEME into ECEF:
 
