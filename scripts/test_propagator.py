@@ -8,7 +8,6 @@ from sgp4.conveniences import sat_epoch_datetime
 # CelesTrak, propagate to the current time, return its current position and velocity
 
 catalog_number = 25544
-catalog_number = 25544
 
 satellite = create_satrec(catalog_number)
 
@@ -26,7 +25,7 @@ times = {
 
 
 for label, when in times.items():
-    position, velocity = propagate_satellite(
+    time, position, velocity = propagate_satellite(
         satellite,
         when
     )

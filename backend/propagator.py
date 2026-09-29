@@ -5,7 +5,7 @@
 
 from sgp4.api import Satrec, SGP4_ERRORS, WGS72, jday # Satellite record from SPG4
 from sgp4 import omm
-from datetime import datetime, timezone
+from datetime import timezone
 
 from data.satellite_data import get_satellite_data
 
@@ -23,7 +23,7 @@ def create_satrec(catalog_number):
 
 
 
-# Propagate a satellite to a specific UTC datetime. Returns: position: (x, y, z) in kilometers velocity: (vx, vy, vz) in kilometers per second at given time
+# Propagate a satellite to a specific UTC datetime. Returns: position: (x, y, z) in kilometers velocity: (vx, vy, vz) in kilometers per second at given time, and the time
 # Note: SGP4 uses radians instead of degrees
 def propagate_satellite(satellite, time): 
     if time.tzinfo is None:
@@ -45,4 +45,4 @@ def propagate_satellite(satellite, time):
         raise ValueError(f"Error occurred while propagating satellite: {SGP4_ERRORS[error]}")
     
     # Return position xyz and velocity xyz in terms of TEME: True Equator, Mean Equinox. A Cartesian Earth-centered coordinate
-    return position, velocity
+    return position, velocity, time

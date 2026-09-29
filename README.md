@@ -12,6 +12,45 @@ The project is being built from the ground up to explore orbital mechanics, sate
 
 Retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions. 
 
+## Goals
+
+* Retrieve and process satellite orbital data ✓
+* Calculate satellite positions and velocities ✓
+* Convert orbital coordinates to latitude, longitude, and altitude
+* Store satellite data in a database
+* Provide a REST API
+* Build an interactive satellite map
+* Visualize satellites and orbits on a 3D Earth
+* Calculate satellite passes and visibility
+
+## Technology
+
+**Backend:** Python, FastAPI, SGP4, SQLite, Pydantic
+
+**Frontend:** React, TypeScript, Three.js
+
+**Development:** Git, Docker, Pytest, GitHub Actions
+
+## Data
+
+Initial orbital data will come from **CelesTrak**, using OMM JSON as the primary format.
+
+## Project Structure
+
+```text
+silmaril/
+├── backend/
+├── frontend/
+├── data/
+├── tests/
+├── scripts/
+├── docs/
+├── requirements.txt
+└── README.md
+```
+
+The project will be developed incrementally, starting with satellite data and orbital calculations before expanding into the web application and 3D visualization.
+
 ## Helpful Links and Info
 CelesTrak: https://celestrak.org
 
@@ -85,42 +124,99 @@ BSTAR → How is atmospheric drag
         affecting the model?
 
 SGP4 is an orbit propagation model. It takes the orbital parameters contained in a TLE/OMM record and propagates them forward or backward from the record's epoch to calculate the satellite's position and velocity. SGP4 gives us a position in an Earth-centered inertial coordinate system and a velocity that we have to convert.
-        
-## Goals
 
-* Retrieve and process satellite orbital data ✓
-* Calculate satellite positions and velocities ✓
-* Convert orbital coordinates to latitude, longitude, and altitude
-* Store satellite data in a database
-* Provide a REST API
-* Build an interactive satellite map
-* Visualize satellites and orbits on a 3D Earth
-* Calculate satellite passes and visibility
+## Coordinate Conversions
 
-## Technology
-
-**Backend:** Python, FastAPI, SGP4, SQLite, Pydantic
-
-**Frontend:** React, TypeScript, Three.js
-
-**Development:** Git, Docker, Pytest, GitHub Actions
-
-## Data
-
-Initial orbital data will come from **CelesTrak**, using OMM JSON as the primary format.
-
-## Project Structure
+Silmaril converts SGP4's **TEME** (True Equator, Mean Equinox) coordinates into **ECEF** (Earth-Centered, Earth-Fixed), then into geodetic latitude, longitude, and altitude.
 
 ```text
-silmaril/
-├── backend/
-├── frontend/
-├── data/
-├── tests/
-├── scripts/
-├── docs/
-├── requirements.txt
-└── README.md
+TEME → ECEF → Latitude / Longitude / Altitude
 ```
 
-The project will be developed incrementally, starting with satellite data and orbital calculations before expanding into the web application and 3D visualization.
+### TEME → ECEF
+
+SGP4 provides the satellite position as:
+
+$$
+(x_{TEME}, y_{TEME}, z_{TEME})
+$$
+
+Calculate Julian centuries since J2000.0:
+
+$$
+T = \frac{JD - 2451545.0}{36525}
+$$
+
+Calculate Greenwich Mean Sidereal Time:
+
+$$
+\theta =
+280.46061837
++ 360.98564736629(JD - 2451545.0)
++ 0.000387933T^2
+-\frac{T^3}{38710000}
+$$
+
+Normalize $\theta$ to $0^\circ$–$360^\circ$ and convert to radians.
+
+Then rotate TEME into ECEF:
+
+$$
+x_{ECEF} = x_{TEME}\cos(\theta) + y_{TEME}\sin(\theta)
+$$
+
+$$
+y_{ECEF} = -x_{TEME}\sin(\theta) + y_{TEME}\cos(\theta)
+$$
+
+$$
+z_{ECEF} = z_{TEME}
+$$
+
+### ECEF → Geodetic
+
+Silmaril uses the **WGS84** ellipsoid:
+
+$$
+a = 6378.137\text{ km}
+$$
+
+$$
+f = \frac{1}{298.257223563}
+$$
+
+$$
+e^2 = f(2-f)
+$$
+
+Longitude:
+
+$$
+\lambda = \operatorname{atan2}(y,x)
+$$
+
+Distance from Earth's rotational axis:
+
+$$
+p = \sqrt{x^2+y^2}
+$$
+
+The latitude and altitude are then solved iteratively using:
+
+$$
+N = \frac{a}{\sqrt{1-e^2\sin^2(\phi)}}
+$$
+
+$$
+h = \frac{p}{\cos(\phi)} - N
+$$
+
+until the latitude converges.
+
+### Reference Models
+
+* **WGS72** — SGP4 propagation
+* **WGS84** — geodetic latitude, longitude, and altitude
+
+        
+
