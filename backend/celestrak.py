@@ -4,23 +4,29 @@
 
 import requests
 
-# For testing purposes, get specifically the ISS data
-def get_iss_data():
-    # Use Celestrak's query format to retrieve ISS data
-    url = "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=JSON"
-    response = requests.get(url)
-    # Convert to JSON
-    data = response.json()
-    return data
 
-# General function to retrieve data for any satellite
+BASE_URL = "https://celestrak.org/NORAD/elements/gp.php"
+
+HEADERS = {
+    "User-Agent": "Silmaril/0.1"
+}
+
+
+# Retrieve orbital data for a satellite using its NORAD catalog number.
 def get_satellite_data(catalog_number):
-    url = (
-        f"https://celestrak.org/NORAD/elements/gp.php"
-        f"?CATNR={catalog_number}&FORMAT=JSON"
+    params = {
+        "CATNR": catalog_number,
+        "FORMAT": "JSON"
+    }
+
+    response = requests.get(
+        BASE_URL,
+        params=params,
+        headers=HEADERS,
+        timeout=30
     )
 
-    response = requests.get(url)
     response.raise_for_status()
 
     return response.json()
+
