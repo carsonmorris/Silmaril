@@ -150,11 +150,8 @@ $$
 Calculate Greenwich Mean Sidereal Time:
 
 $$
-\theta =
-280.46061837
-+ 360.98564736629(JD - 2451545.0)
-+ 0.000387933T^2
--\frac{T^3}{38710000}
+\theta = 280.46061837 + 360.98564736629(JD - 2451545.0) + 0.000387933T^2-
+\frac{T^3}{38710000}
 $$
 
 Normalize $\theta$ to $0^\circ$–$360^\circ$ and convert to radians.
@@ -192,7 +189,7 @@ $$
 Longitude:
 
 $$
-\lambda = \operatorname{atan2}(y,x)
+\lambda = atan2(y,x)
 $$
 
 Distance from Earth's rotational axis:
