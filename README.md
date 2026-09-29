@@ -113,6 +113,7 @@ Initial orbital data will come from **CelesTrak**, using OMM JSON as the primary
 silmaril/
 ├── backend/
 ├── frontend/
+├── data/
 ├── tests/
 ├── scripts/
 ├── docs/
