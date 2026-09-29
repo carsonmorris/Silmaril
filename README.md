@@ -10,11 +10,7 @@ The project is being built from the ground up to explore orbital mechanics, sate
 
 🚧 **Early Development**
 
-Success: Retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions.
-
-Success: Calculates satellite position and velocity at a given time. 
-
-Working on: Converting to latitude and longitude positions.
+Retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions. 
 
 ## Helpful Links and Info
 CelesTrak: https://celestrak.org
