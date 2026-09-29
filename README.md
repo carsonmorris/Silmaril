@@ -34,10 +34,20 @@ Potential Decays (SPECIAL=DECAYING).
 ISS: https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=JSON
 
 OMM stands for Orbit Mean-Elements Message
+
 Epoch: Data/Time where Data is considered accurate
+
 Inclination: How tilted the orbit is relative to Earth, where 0 degrees is inline with the equator
+
 Eccentricity: How stretched the orbit is. Low eccentricity means nearly circular. High means more elongated
+
 Mean Motion: How quickly the satellite goes around Earth, expressed as revolutions per day.
+
+RAAN : Right Ascension of the Ascending Node. It tells us which direction the satellite's orbital plane is pointing around Earth.
+
+Mean Anomaly: a mathematical angle that increases at a steady, uniform rate over time to track an object's position along an elliptical orbit
+
+
 
 
                     RAAN
@@ -71,6 +81,8 @@ Epoch → When are these values
 
 BSTAR → How is atmospheric drag
         affecting the model?
+
+SGP4 is an orbit propagation model. It takes the orbital parameters contained in a TLE/OMM record and propagates them forward or backward from the record's epoch to calculate the satellite's position and velocity. SGP4 gives us a position in an Earth-centered inertial coordinate system and a velocity that we have to convert.
         
 ## Goals
 
