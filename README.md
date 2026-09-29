@@ -14,7 +14,8 @@ Currently working on retrieving real satellite orbital data from **CelesTrak**, 
 
 ## Helpful Links and Info
 CelesTrak: https://celestrak.org
-Shout out to T.S. Kelso and his amazing work here. He has an existing version of a satellite tracker using this data on the CelesTrak website.
+
+Shout out to T.S. Kelso and his amazing work here!
 
 All GP queries on CelesTrak will take the form:
 
