@@ -10,7 +10,11 @@ The project is being built from the ground up to explore orbital mechanics, sate
 
 🚧 **Early Development**
 
-Currently working on retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions.
+Success: Retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions.
+
+Success: Calculates satellite position and velocity at a given time. 
+
+Working on: Converting to latitude and longitude positions.
 
 ## Helpful Links and Info
 CelesTrak: https://celestrak.org
@@ -88,8 +92,8 @@ SGP4 is an orbit propagation model. It takes the orbital parameters contained in
         
 ## Goals
 
-* Retrieve and process satellite orbital data
-* Calculate satellite positions and velocities
+* Retrieve and process satellite orbital data ✓
+* Calculate satellite positions and velocities ✓
 * Convert orbital coordinates to latitude, longitude, and altitude
 * Store satellite data in a database
 * Provide a REST API
