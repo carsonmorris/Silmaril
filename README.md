@@ -13,7 +13,8 @@ The project is being built from the ground up to explore orbital mechanics, sate
 Currently working on retrieving real satellite orbital data from **CelesTrak**, parsing **OMM JSON**, and using **SGP4** to calculate satellite positions.
 
 ## Helpful Links and Info
-CelesTrak "A New Way to Obtain GP Data (aka TLEs)" documentation: https://celestrak.org/NORAD/documentation/gp-data-formats.php
+CelesTrak: https://celestrak.org
+Shout out to T.S. Kelso and his amazing work here. He has an existing version of a satellite tracker using this data on the CelesTrak website.
 
 All GP queries on CelesTrak will take the form:
 
