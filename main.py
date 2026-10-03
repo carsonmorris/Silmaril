@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import webbrowser
@@ -15,11 +15,16 @@ from data.satellite_data import get_satellite_data
 
 # Recalculate the satellite's position this often while the map is open.
 REFRESH_INTERVAL_SECONDS = 3
+PATH_HISTORY_HOURS = 24
+PATH_SAMPLE_INTERVAL_SECONDS = 10
+TRAIL_REDRAW_INTERVAL_SECONDS = 10
+MAX_TRAIL_AGE_SECONDS = PATH_HISTORY_HOURS * 60 * 60
 
 
-def get_current_position(satellite):
-    # The propagator requires a timezone-aware time; use UTC for every update.
-    current_time = datetime.now(timezone.utc)
+def get_current_position(satellite, current_time=None):
+    # Use the current UTC time for live updates, or a supplied time for path history.
+    if current_time is None:
+        current_time = datetime.now(timezone.utc)
 
     # SGP4 returns a TEME position. Convert it through ECEF to map-ready coordinates.
     position_teme, _ = propagate_satellite(satellite, current_time)
@@ -32,7 +37,27 @@ def get_current_position(satellite):
         "longitude": longitude,
         "altitude": altitude,
         "timestamp": current_time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "timestamp_unix": current_time.timestamp(),
     }
+
+# Sample the past day at a fixed interval so the user can choose a trail duration.
+def get_path_history(satellite, end_time):
+    start_time = end_time - timedelta(hours=PATH_HISTORY_HOURS)
+    number_of_steps = PATH_HISTORY_HOURS * 60 * 60 // PATH_SAMPLE_INTERVAL_SECONDS
+    path = []
+
+    for step in range(number_of_steps + 1):
+        sample_time = start_time + timedelta(
+            seconds=step * PATH_SAMPLE_INTERVAL_SECONDS
+        )
+        position = get_current_position(satellite, sample_time)
+        path.append([
+            position["latitude"],
+            position["longitude"],
+            position["timestamp_unix"],
+        ])
+
+    return path
 
 
 def main():
@@ -52,7 +77,10 @@ def main():
     # Create the SGP4 record once and reuse it for each position update.
     try:
         satellite = create_satrec(catalog_number)
-        position = get_current_position(satellite)
+        # Use one end time for both the initial marker and the historical trail.
+        tracking_time = datetime.now(timezone.utc)
+        position = get_current_position(satellite, tracking_time)
+        path_history = get_path_history(satellite, tracking_time)
         # The metadata supplies the satellite's display name for the marker.
         metadata = get_satellite_data(catalog_number)[0]
     except (IndexError, requests.RequestException, ValueError) as error:
@@ -64,8 +92,14 @@ def main():
     location_map = folium.Map(
         location=[0, 0],
         zoom_start=2,
-        tiles="Esri.WorldStreetMap",
+        tiles=None,
+        max_bounds=True,
     )
+    # Keep the map to one world and prevent Esri tiles from wrapping horizontally.
+    folium.TileLayer(
+        tiles="Esri.WorldStreetMap",
+        no_wrap=True,
+    ).add_to(location_map)
     # Place the marker at the first calculated position; the browser moves it on later updates.
     marker = folium.Marker(
         location=[position["latitude"], position["longitude"]],
@@ -78,6 +112,26 @@ def main():
             f"Altitude: {position['altitude']:.1f} km"
         ),
     ).add_to(location_map)
+    # JavaScript draws the selected time window and splits it at the date line.
+    trail_group = folium.FeatureGroup(name="Satellite trail").add_to(location_map)
+
+    # Give the user a small segmented control for choosing how much trail to show.
+    location_map.get_root().html.add_child(Element(
+        '<div id="trail-duration-control" role="group" aria-label="Trail duration">'
+        '<button type="button" data-trail-hours="1" aria-pressed="true">1h</button>'
+        '<button type="button" data-trail-hours="6" aria-pressed="false">6h</button>'
+        '<button type="button" data-trail-hours="24" aria-pressed="false">24h</button>'
+        '</div>'
+        '<style>'
+        '#trail-duration-control{position:fixed;top:12px;left:50%;transform:translateX(-50%);'
+        'z-index:9999;display:flex;padding:3px;background:#fff;border:1px solid #777;'
+        'border-radius:6px;box-shadow:0 1px 4px #5558}'
+        '#trail-duration-control button{padding:6px 10px;border:0;background:transparent;'
+        'color:#222;font:13px sans-serif;cursor:pointer}'
+        '#trail-duration-control button[aria-pressed="true"]{background:#d94841;'
+        'color:#fff;border-radius:4px}'
+        '</style>'
+    ))
 
     # Show the last successful update time or an error from the position request.
     location_map.get_root().html.add_child(Element(
@@ -86,12 +140,51 @@ def main():
         'border: 1px solid #777; font: 13px sans-serif;">Starting live updates</div>'
     ))
 
-    # Folium builds the map and marker JavaScript separately. Wait for the page to load,
-    # then look up the marker after fetching a position so Folium has initialized it.
+    # Keep timestamped samples in the browser so duration changes do not need a server request.
     update_script = f"""
     const satelliteName = {json.dumps(satellite_name)};
+    const maximumTrailAge = {MAX_TRAIL_AGE_SECONDS};
+    const trailRedrawInterval = {TRAIL_REDRAW_INTERVAL_SECONDS};
+    let trailGroup = null;
+    let trailSamples = {json.dumps(path_history, separators=(",", ":"))};
+    let firstRetainedSample = 0;
+    let selectedTrailHours = 1;
+    let lastTrailRedraw = 0;
+    let refreshInProgress = false;
+
+    function redrawTrail() {{
+        trailGroup.clearLayers();
+        const newestSample = trailSamples[trailSamples.length - 1];
+        const cutoff = newestSample[2] - selectedTrailHours * 60 * 60;
+        const segments = [];
+        let segment = [];
+        let previousLongitude = null;
+
+        for (let index = firstRetainedSample; index < trailSamples.length; index++) {{
+            const sample = trailSamples[index];
+            if (sample[2] < cutoff) continue;
+
+            // Start another segment instead of drawing across the date line.
+            if (previousLongitude !== null && Math.abs(sample[1] - previousLongitude) > 180) {{
+                if (segment.length > 0) segments.push(segment);
+                segment = [];
+            }}
+            segment.push([sample[0], sample[1]]);
+            previousLongitude = sample[1];
+        }}
+        if (segment.length > 0) segments.push(segment);
+
+        for (const points of segments) {{
+            L.polyline(points, {{ color: "#d94841", weight: 3, opacity: 0.8 }})
+                .addTo(trailGroup);
+        }}
+        lastTrailRedraw = newestSample[2];
+    }}
 
     async function refreshPosition() {{
+        // Do not let a slow request overlap the next scheduled refresh.
+        if (refreshInProgress) return;
+        refreshInProgress = true;
         const positionStatus = document.getElementById("position-status");
         try {{
             // Request a fresh position from Python rather than using a cached response.
@@ -104,6 +197,38 @@ def main():
             // Resolve the marker here because Folium's generated code initializes it later.
             const liveMarker = {marker.get_name()};
             liveMarker.setLatLng([position.latitude, position.longitude]);
+            const previousSample = trailSamples[trailSamples.length - 1];
+            const crossedDateLine = Math.abs(position.longitude - previousSample[1]) > 180;
+            trailSamples.push([
+                position.latitude,
+                position.longitude,
+                position.timestamp_unix,
+            ]);
+
+            // Discard old samples without shifting the whole array on every update.
+            const oldestAllowedTime = position.timestamp_unix - maximumTrailAge;
+            while (
+                firstRetainedSample < trailSamples.length &&
+                trailSamples[firstRetainedSample][2] < oldestAllowedTime
+            ) {{
+                firstRetainedSample++;
+            }}
+            if (
+                firstRetainedSample > 1024 &&
+                firstRetainedSample > trailSamples.length / 2
+            ) {{
+                trailSamples = trailSamples.slice(firstRetainedSample);
+                firstRetainedSample = 0;
+            }}
+
+            // Rebuild the visible time window periodically, or immediately after pruning
+            // date-line crossings. The marker itself still updates every poll.
+            if (
+                crossedDateLine ||
+                position.timestamp_unix - lastTrailRedraw >= trailRedrawInterval
+            ) {{
+                redrawTrail();
+            }}
             // Keep the popup in sync with the marker's updated location and timestamp.
             liveMarker.setPopupContent(
                 `${{satelliteName}}<br>Time: ${{position.timestamp}}<br>` +
@@ -115,10 +240,27 @@ def main():
         }} catch (error) {{
             console.error("Position update failed:", error);
             positionStatus.textContent = `Position update failed: ${{error.message}}`;
+        }} finally {{
+            refreshInProgress = false;
         }}
     }}
 
     window.addEventListener("DOMContentLoaded", () => {{
+        // Folium declares the layer after this script, so resolve it after page initialization.
+        trailGroup = {trail_group.get_name()};
+        redrawTrail();
+        document.querySelectorAll("[data-trail-hours]").forEach(button => {{
+            button.addEventListener("click", () => {{
+                selectedTrailHours = Number(button.dataset.trailHours);
+                document.querySelectorAll("[data-trail-hours]").forEach(option => {{
+                    option.setAttribute(
+                        "aria-pressed",
+                        String(option === button)
+                    );
+                }});
+                redrawTrail();
+            }});
+        }});
         refreshPosition();
         window.setInterval(refreshPosition, {REFRESH_INTERVAL_SECONDS * 1000});
     }});
