@@ -125,7 +125,7 @@ def create_selection_page(error_message=""):
             <form id="satellite-form" action="/map" method="get">
 				<h2 id="selector-title">Choose a satellite to track</h2>
 				{error_html}
-                <p class="form-hint"><i>Hint: The ISS's NORAD catalog number is 25544.</i></p>
+                <p class="form-hint"><i>Hint: The International Space Station's NORAD catalog number is 25544.</i></p>
                 <label for="catalog-number">NORAD catalog number</label>
                 <input id="catalog-number" name="catalog_number" type="number" min="1" step="1" value="" required autofocus>
                 <button id="submit-button" type="submit">Open live map</button>

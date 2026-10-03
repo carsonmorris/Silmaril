@@ -10,16 +10,16 @@ The project is being built from the ground up to explore orbital mechanics, sate
 
 We can now retrieve and process satellite orbital data, calculate its positions and velocities with SGP4, and convert these values into latitude, longitude and altitude! Verified against https://www.astroviewer.net/iss/en/
 
-Additionally, there is now a Folium powered 2D map utilizing Esri WorldStreetMap to display a selected satellite's live location. The map is preloaded with the last 24 hours of positioning data so the user can toggle between 1hr, 6hrs, and 24hrs of previous locaiton data. 
+Additionally, there is now a Folium powered 2D map utilizing Esri WorldStreetMap to display a selected satellite's live location. The map is preloaded with the last 24 hours of positioning data so the user can toggle between 1hr, 6hrs, and 24hrs of previous location data. 
 
 ## Goals
 
 * Retrieve and process satellite orbital data ✓
 * Calculate satellite positions and velocities ✓
 * Convert orbital coordinates to latitude, longitude, and altitude ✓
+* Build an interactive 2D satellite map ✓
 * Store satellite data in a database
 * Provide a REST API
-* Build an interactive satellite map ✓
 * Visualize satellites and orbits on a 3D Earth
 * Calculate satellite passes and visibility
 
