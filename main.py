@@ -118,7 +118,7 @@ def create_selection_page(error_message=""):
             <h1 id="about-title">Objects in Orbit</h1>
             <p><i>Silmaril</i> calculates satellite positions from orbital data and brings them to life on a live map. Built to explore orbital mechanics and live visual tracking.</p>
             <p><br>“And thus it came to pass that the Silmarils found their long homes: one in the airs of heaven, and one in the fires of the heart of the world, and one in the deep waters.” ― J.R.R. Tolkien, The Silmarillion</p>
-            <p><br>Enter a NORAD catalog number to track a satellite in real-time.<br></p>
+            <p><br>Enter a NORAD (North American Aerospace Defense Command) catalog number to track a satellite in real-time.<br></p>
         </section>
         <section class="selector" aria-labelledby="selector-title">
             
@@ -195,7 +195,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
     location_map.get_root().html.add_child(Element(
         '<aside id="silmaril-brand" aria-label="About Silmaril">'
         '<a id="silmaril-brand-title" href="https://github.com/carsonmorris/Silmaril" '
-        'target="_blank" rel="noopener noreferrer">Silmaril: Satellite Tracker</a>'
+        'target="_blank" rel="noopener noreferrer"><i>Silmaril</i>: Satellite Tracker</a>'
         '<div id="silmaril-brand-links">'
         '<a href="https://github.com/carsonmorris/Silmaril" target="_blank" '
         'rel="noopener noreferrer">GitHub repository</a>'
