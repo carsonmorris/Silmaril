@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 import webbrowser
 
@@ -107,7 +108,7 @@ def create_selection_page(error_message=""):
             <a class="brand-title" href="https://github.com/carsonmorris/Silmaril" target="_blank" rel="noopener noreferrer"><i>Silmaril</i>: Satellite Tracker</a>
             <div class="brand-links">
                 <a href="https://github.com/carsonmorris/Silmaril" target="_blank" rel="noopener noreferrer">GitHub repository</a>
-                <span>Made by Carson Morris - 2026</span>
+                <span>Created by Carson Morris - 2026</span>
                 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0 1.0 Universal</a>
                 <span>Orbital data sourced from <a href="https://celestrak.org" target="_blank" rel="noopener noreferrer">CelesTrak</a></span>
             </div>
@@ -143,7 +144,7 @@ def create_selection_page(error_message=""):
 </html>"""
 
 
-def create_map_page(catalog_number, satellite, satellite_name, position, path_history):
+def create_map_page(catalog_number, satellite_name, position, path_history):
     # Start centered on the satellite; the browser fits the recent path after loading.
     location_map = folium.Map(
         location=[position["latitude"], position["longitude"]],
@@ -157,17 +158,23 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
         no_wrap=True,
     ).add_to(location_map)
 
+    satellite_icon = folium.CustomIcon(
+        icon_image=str(Path(__file__).resolve().parent / "img" / "satellite-icon.png"),
+        icon_size=(40, 40),
+        icon_anchor=(20, 20),
+    )
     # Place the marker at the first calculated position; the browser moves it on later updates.
     marker = folium.Marker(
         location=[position["latitude"], position["longitude"]],
+        icon=satellite_icon,
         tooltip=satellite_name,
-        popup=(
+        popup=folium.Popup((
             f"{satellite_name}<br>"
             f"Time: {position['timestamp']}<br>"
             f"Latitude: {position['latitude']:.4f}°<br>"
             f"Longitude: {position['longitude']:.4f}°<br>"
             f"Altitude: {position['altitude']:.1f} km"
-        ),
+        ), max_width=400),
     ).add_to(location_map)
     # JavaScript draws the selected time window and splits it at the date line.
     trail_group = folium.FeatureGroup(name="Satellite trail").add_to(location_map)
@@ -191,7 +198,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
         '</style>'
     ))
 
-    # Put the project identity on the map and provide a way to choose another satellite.
+    # Add a branded map overlay in the top left with project links and a shortcut to choose another satellite.
     location_map.get_root().html.add_child(Element(
         '<aside id="silmaril-brand" aria-label="About Silmaril">'
         '<a id="silmaril-brand-title" href="https://github.com/carsonmorris/Silmaril" '
@@ -201,7 +208,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
         'rel="noopener noreferrer">GitHub repository</a>'
         '<a href="/">Change satellite</a>'
         '</div>'
-        '<div id="silmaril-author">Made by Carson Morris, 2026</div>'
+        '<div id="silmaril-author">Created by Carson Morris, 2026</div>'
         '</aside>'
         '<style>'
         '#silmaril-brand{position:fixed;top:12px;left:12px;z-index:9999;'
@@ -218,7 +225,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
         '</style>'
     ))
 
-    # Show the last successful update time or an error from the position request.
+    # Show the last successful update time or an error from the position request in the bottom left.
     location_map.get_root().html.add_child(Element(
         '<div id="position-status" style="position: fixed; bottom: 16px; '
         'left: 16px; z-index: 9999; padding: 8px 12px; background: white; '
@@ -265,10 +272,12 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
     }}
 
     async function refreshPosition() {{
+        // Prevent overlapping polls if a position request takes longer than expected.
         if (refreshInProgress) return;
         refreshInProgress = true;
         const positionStatus = document.getElementById("position-status");
         try {{
+            // Ask this app's local endpoint to propagate the already-loaded satellite.
             const response = await fetch("/position?catalog_number={catalog_number}", {{ cache: "no-store" }});
             if (!response.ok) {{
                 const error = await response.json().catch(() => ({{}}));
@@ -281,6 +290,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
             const crossedDateLine = Math.abs(position.longitude - previousSample[1]) > 180;
             trailSamples.push([position.latitude, position.longitude, position.timestamp_unix]);
 
+            // Discard samples outside the history window and periodically compact the array.
             const oldestAllowedTime = position.timestamp_unix - maximumTrailAge;
             while (
                 firstRetainedSample < trailSamples.length &&
@@ -297,6 +307,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
                 crossedDateLine ||
                 position.timestamp_unix - lastTrailRedraw >= trailRedrawInterval
             ) {{
+                // Split at the date line or redraw when the trail's refresh interval elapses.
                 redrawTrail();
             }}
             liveMarker.setPopupContent(
@@ -310,11 +321,13 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
             console.error("Position update failed:", error);
             positionStatus.textContent = `Position update failed: ${{error.message}}`;
         }} finally {{
+            // Release the guard even when the request or response handling fails.
             refreshInProgress = false;
         }}
     }}
 
     window.addEventListener("DOMContentLoaded", () => {{
+        // Attach the preloaded trail samples to their Leaflet layer and draw them.
         trailGroup = {trail_group.get_name()};
         redrawTrail();
 
@@ -322,6 +335,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
         const initialViewCutoff = trailSamples[trailSamples.length - 1][2] - initialViewWindow;
         let initialViewPoints = [];
         let previousLongitude = null;
+        // Keep only recent points, restarting the view segment if it crosses the date line.
         for (let index = firstRetainedSample; index < trailSamples.length; index++) {{
             const sample = trailSamples[index];
             if (sample[2] < initialViewCutoff) continue;
@@ -332,6 +346,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
             previousLongitude = sample[1];
         }}
         const liveMap = {location_map.get_name()};
+        // Fit the map to the recent path, or center it on the current position if needed.
         if (initialViewPoints.length > 1) {{
             liveMap.fitBounds(initialViewPoints, {{ padding: [48, 48], maxZoom: 5 }});
         }} else {{
@@ -341,6 +356,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
             );
         }}
 
+        // Update the selected duration and redraw whenever a trail control is clicked.
         document.querySelectorAll("[data-trail-hours]").forEach(button => {{
             button.addEventListener("click", () => {{
                 selectedTrailHours = Number(button.dataset.trailHours);
@@ -350,6 +366,7 @@ def create_map_page(catalog_number, satellite, satellite_name, position, path_hi
                 redrawTrail();
             }});
         }});
+        // Refresh immediately, then continue at the configured polling interval.
         refreshPosition();
         window.setInterval(refreshPosition, {REFRESH_INTERVAL_SECONDS * 1000});
     }});
@@ -402,7 +419,6 @@ def main():
                     satellites_by_catalog[catalog_number] = satellite
                     map_html = create_map_page(
                         catalog_number,
-                        satellite,
                         satellite_name,
                         position,
                         path_history,
