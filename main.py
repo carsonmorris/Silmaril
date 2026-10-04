@@ -12,6 +12,7 @@ import requests
 from branca.element import Element
 
 from backend.coordinates import ecef_to_geodetic, teme_to_ecef
+from backend.models import OrbitalElements, OrbitalMetadata
 from backend.propagator import create_satrec, propagate_satellite
 from data.satellite_data import get_satellite_data
 
@@ -23,6 +24,117 @@ PATH_SAMPLE_INTERVAL_SECONDS = 10
 TRAIL_REDRAW_INTERVAL_SECONDS = 10
 MAX_TRAIL_AGE_SECONDS = PATH_HISTORY_HOURS * 60 * 60
 INITIAL_VIEW_WINDOW_MINUTES = 10
+
+SATELLITE_DATA_PANEL_STYLE = """
+<style>
+#satellite-data-panel {
+    position: fixed;
+    top: 112px;
+    left: 12px;
+    z-index: 9998;
+    width: min(340px, calc(100vw - 24px));
+    color: #222;
+    font: 13px sans-serif;
+}
+#satellite-data-panel[open] {
+    max-height: calc(100vh - 176px);
+    overflow: hidden;
+}
+#satellite-data-panel summary {
+    padding: 9px 12px;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid #777;
+    border-radius: 5px;
+    box-shadow: 0 1px 4px #5558;
+    font-weight: 700;
+    cursor: pointer;
+}
+#satellite-data-panel[open] summary {
+    border-radius: 5px 5px 0 0;
+}
+#satellite-data-panel .satellite-data-content {
+    box-sizing: border-box;
+    height: calc(100vh - 212px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid #777;
+    border-top: 0;
+    border-radius: 0 0 5px 5px;
+}
+#satellite-data-panel .satellite-data-section + .satellite-data-section {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #cbd5d1;
+}
+#satellite-data-panel h3 {
+    margin: 0 0 5px;
+    font-size: 12px;
+}
+#satellite-data-panel dl {
+    margin: 0;
+}
+#satellite-data-panel .satellite-data-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(70px, auto);
+    gap: 4px 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid #e3e8e5;
+}
+#satellite-data-panel dt {
+    font-weight: 600;
+}
+#satellite-data-panel dt small {
+    display: block;
+    color: #66756f;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.35;
+}
+#satellite-data-panel dd {
+    max-width: 145px;
+    margin: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+    font: 11px/1.4 monospace;
+}
+#satellite-data-panel .satellite-raw-json {
+    margin-top: 10px;
+}
+#satellite-data-panel .satellite-raw-json summary {
+    padding: 6px 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 12px;
+}
+#satellite-data-panel .satellite-raw-json pre {
+    max-height: 180px;
+    overflow: auto;
+    margin: 0;
+    padding: 8px;
+    background: #f4f6f5;
+    border: 1px solid #cbd5d1;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: 10px/1.4 monospace;
+}
+@media (max-width: 700px) {
+    #satellite-data-panel {
+        top: 145px;
+    }
+    #satellite-data-panel[open] {
+        max-height: calc(100vh - 203px);
+    }
+    #satellite-data-panel .satellite-data-content {
+        height: calc(100vh - 239px);
+    }
+}
+</style>
+"""
 
 
 def get_current_position(satellite, current_time=None):
@@ -144,7 +256,67 @@ def create_selection_page(error_message=""):
 </html>"""
 
 
-def create_map_page(catalog_number, satellite_name, position, path_history):
+def escape_satellite_value(value):
+    return escape(str(value)).replace("{", "&#123;").replace("}", "&#125;")
+
+
+def create_satellite_data_sections(satellite_data):
+    def render_entry(label, value, description=""):
+        description_html = f"<small>{escape(description)}</small>" if description else ""
+        formatted_value = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+        return (
+            '<div class="satellite-data-entry">'
+            f"<dt>{escape(label)}{description_html}</dt>"
+            f"<dd>{escape_satellite_value(formatted_value)}</dd>"
+            "</div>"
+        )
+
+    sections = []
+    displayed_fields = set()
+    for title, model in (
+        ("Satellite metadata", OrbitalMetadata),
+        ("Orbital elements", OrbitalElements),
+    ):
+        fields = getattr(model, "model_fields", None)
+        if fields is None:
+            fields = model.__fields__
+
+        entries = []
+        for field_name, field in fields.items():
+            alias = field.alias or field_name
+            if alias not in satellite_data:
+                continue
+            displayed_fields.add(alias)
+            entries.append(render_entry(
+                field.title or field_name.replace("_", " ").title(),
+                satellite_data[alias],
+                field.description or "",
+            ))
+
+        if entries:
+            sections.append(
+                f'<section class="satellite-data-section"><h3>{escape(title)}</h3>'
+                f'<dl>{"".join(entries)}</dl></section>'
+            )
+
+    additional_entries = [
+        render_entry(key.replace("_", " ").title(), value, "Additional CelesTrak field.")
+        for key, value in satellite_data.items()
+        if key not in displayed_fields
+    ]
+    if additional_entries:
+        sections.append(
+            '<section class="satellite-data-section"><h3>Additional fields</h3>'
+            f'<dl>{"".join(additional_entries)}</dl></section>'
+        )
+
+    return "".join(sections)
+
+
+def create_map_page(catalog_number, satellite_name, position, path_history, satellite_data):
+    satellite_data_sections = create_satellite_data_sections(satellite_data)
+    satellite_data_json = escape(json.dumps(satellite_data, indent=2, ensure_ascii=False))
+    satellite_data_json = satellite_data_json.replace("{", "&#123;").replace("}", "&#125;")
     # Start centered on the satellite; the browser fits the recent path after loading.
     location_map = folium.Map(
         location=[position["latitude"], position["longitude"]],
@@ -224,6 +396,21 @@ def create_map_page(catalog_number, satellite_name, position, path_history):
         '@media(max-width:700px){ #trail-duration-control{top:105px;left:12px;transform:none}}'
         '</style>'
     ))
+
+    satellite_data_panel = f"""
+    <details id="satellite-data-panel" open>
+        <summary>CelesTrak satellite data</summary>
+        <div class="satellite-data-content">
+            {satellite_data_sections}
+            <details class="satellite-raw-json">
+                <summary>Raw JSON</summary>
+                <pre>{satellite_data_json}</pre>
+            </details>
+        </div>
+    </details>
+    {SATELLITE_DATA_PANEL_STYLE}
+    """
+    location_map.get_root().html.add_child(Element(satellite_data_panel))
 
     # Show the last successful update time or an error from the position request in the bottom left.
     location_map.get_root().html.add_child(Element(
@@ -422,6 +609,7 @@ def main():
                         satellite_name,
                         position,
                         path_history,
+                        metadata,
                     )
                     self.send_content(200, "text/html; charset=utf-8", map_html)
                 except (IndexError, requests.RequestException, ValueError) as error:
