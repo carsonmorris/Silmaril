@@ -2,15 +2,13 @@
 
 # ✦ Silmaril
 
-### A little light in the vastness.
-
 **A satellite-tracking and orbital visualization project inspired by the lights above Earth.**
 
 [![Python](https://img.shields.io/badge/Python-SGP4%20tracker-7ce8e5?style=flat-square&labelColor=0b1925)](https://www.python.org/)
 [![Orbit model](https://img.shields.io/badge/Orbit-SGP4-f2d38a?style=flat-square&labelColor=0b1925)](https://celestrak.org/)
 [![Map](https://img.shields.io/badge/Map-Leaflet%20%2B%20Folium-79e8e5?style=flat-square&labelColor=0b1925)](https://python-visualization.github.io/folium/)
 
-*A jewel of starlight, reimagined as a window into the moving lights above us.*
+*A small Tolkein reference: A Silmaril is a jewel of starlight, reimagined as a window into the moving lights above us.*
 
 </div>
 
@@ -163,7 +161,7 @@ https://celestrak.org/NORAD/elements/gp.php?{QUERY}=VALUE[&FORMAT=VALUE]
 | `NAME` | Search for satellite names by part of the name |
 | `SPECIAL` | Special data sets: `GPZ`, `GPZ-PLUS`, or `DECAYING` |
 
-Example: [ISS orbital data (catalog number 25544, JSON)](https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=JSON)
+Example: ISS orbital data (catalog number 25544, JSON): https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=JSON
 
 ## Orbital elements, at a glance
 
