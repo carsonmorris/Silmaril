@@ -1,13 +1,13 @@
 # Author: Carson Morris
-# Silmaril - Created: September 28, 2026
-# Representation of a satellite's orbital data
+# Silmaril - Created at: September 28, 2026
+# Description: Define data models for satellite orbital elements and metadata.
 
 from datetime import datetime
 from pydantic import BaseModel, Field
 
 # Take the JSON data returned from CelesTrak and parse it into a structured format
 
-#Orbital Data - Describing orbit
+# Orbital data describing a satellite's orbit.
 class OrbitalElements(BaseModel):
     epoch: datetime = Field(
         alias="EPOCH",
@@ -65,7 +65,7 @@ class OrbitalElements(BaseModel):
         description="Orbit revolution count at the reference epoch.",
     )
 
-#Orbital Metadata - Describing the satellite itself
+# Orbital metadata describing the satellite itself.
 class OrbitalMetadata(BaseModel):
     object_name: str = Field(
         alias="OBJECT_NAME",

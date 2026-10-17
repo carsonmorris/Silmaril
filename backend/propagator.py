@@ -1,9 +1,8 @@
 # Author: Carson Morris
-# Silmaril - Created: September 28, 2026
-# Orbital Propagator: Given the orbital information for this satellite, 
-# where is the satellite at time T, and how fast/directionally is it moving?
+# Silmaril - Created at: September 28, 2026
+# Description: Propagate satellite orbits and calculate positions and velocities.
 
-from sgp4.api import Satrec, SGP4_ERRORS, WGS72, jday # Satellite record from SPG4
+from sgp4.api import Satrec, SGP4_ERRORS, WGS72, jday  # Satellite record from SGP4
 from sgp4 import omm
 from datetime import timezone
 
@@ -17,9 +16,9 @@ def create_satrec(catalog_number):
             f"No Satellite data found for catalog number {catalog_number}"
         )
     record = data[0]
-    satellite = Satrec() # Returns an empty 3-element tuple containing an error code, position vector, and velocity vector
-    omm.initialize(satellite, record, WGS72) # Initialize the satrec. WGS72 World Geodetic System 1972, a geocentric coordinate reference system and ellipsoid created by the U.S. Department of Defense.
-    return satellite # Return the SGP4 compatible orbit representation
+    satellite = Satrec()  # Create an empty SGP4 satellite record.
+    omm.initialize(satellite, record, WGS72)  # Initialize it from the OMM record using WGS72.
+    return satellite  # Return the SGP4-compatible orbit representation.
 
 
 
@@ -31,8 +30,8 @@ def propagate_satellite(satellite, time):
 
     time = time.astimezone(timezone.utc)
     
-    # jd is teh large date component, fr is fractional date component
-    jd, fr, = jday( #Converts standard calendar dates and times into a Julian date format required for orbital calculations
+    # jd is the whole-day component; fr is the fractional-day component.
+    jd, fr, = jday(  # Convert calendar date and time to Julian date components.
         time.year, 
         time.month, 
         time.day, 

@@ -1,15 +1,13 @@
 # Author: Carson Morris
-# September 29, 2026
-# Coordinates Conversion Functions
-# Convert SGP4 positions from Earth-centered inertial (ECI) coords
-# to lat/lon/alt coordinates. Just using the equations on google
+# Silmaril - Created at: September 29, 2026
+# Description: Convert SGP4 TEME positions to latitude, longitude, and altitude.
 
 from sgp4.api import jday
 from math import degrees, sin, cos, pi, sqrt, atan2
 from datetime import timezone
 
 
-# Convert TEME (True Equator, Mean Equinox) coordinates to ECEF (Earth-Centered, Earth-Fixed) coordinates
+# Convert TEME (True Equator, Mean Equinox) coordinates to ECEF (Earth-Centered, Earth-Fixed).
 def teme_to_ecef(position_teme, time):
     # Make sure the time has timezone information
     if time.tzinfo is None:
@@ -58,7 +56,7 @@ def teme_to_ecef(position_teme, time):
 
     return x_ecef, y_ecef, z_ecef
 
-# Convert ECEF coordinates to geodetic (latitude, longitude, altitude)
+# Convert ECEF coordinates to geodetic latitude, longitude, and altitude.
 def ecef_to_geodetic(position_ecef):
     # WGS84 ellipsoid parameters
     a = 6378.137 # Semi-major axis (km)

@@ -1,3 +1,7 @@
+# Author: Carson Morris
+# Silmaril - Created at: September 28, 2026
+# Description: Run the satellite tracker web app and render live map views.
+
 from datetime import datetime, timedelta, timezone
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,7 +37,7 @@ SATELLITE_DATA_PANEL_STYLE = """
     left: 12px;
     z-index: 9998;
     width: min(340px, calc(100vw - 24px));
-    color: #222;
+    color: #dce8ec;
     font: 13px sans-serif;
 }
 #satellite-data-panel[open] {
@@ -42,8 +46,8 @@ SATELLITE_DATA_PANEL_STYLE = """
 }
 #satellite-data-panel summary {
     padding: 9px 12px;
-    background: rgba(255, 255, 255, .96);
-    border: 1px solid #777;
+    background: rgba(10, 20, 31, .96);
+    border: 1px solid #405260;
     border-radius: 5px;
     box-shadow: 0 1px 4px #5558;
     font-weight: 700;
@@ -59,15 +63,15 @@ SATELLITE_DATA_PANEL_STYLE = """
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 10px 12px;
-    background: rgba(255, 255, 255, .96);
-    border: 1px solid #777;
+    background: rgba(10, 20, 31, .96);
+    border: 1px solid #405260;
     border-top: 0;
     border-radius: 0 0 5px 5px;
 }
 #satellite-data-panel .satellite-data-section + .satellite-data-section {
     margin-top: 10px;
     padding-top: 8px;
-    border-top: 1px solid #cbd5d1;
+    border-top: 1px solid #263945;
 }
 #satellite-data-panel h3 {
     margin: 0 0 5px;
@@ -81,14 +85,14 @@ SATELLITE_DATA_PANEL_STYLE = """
     grid-template-columns: minmax(0, 1fr) minmax(70px, auto);
     gap: 4px 10px;
     padding: 5px 0;
-    border-bottom: 1px solid #e3e8e5;
+    border-bottom: 1px solid #223440;
 }
 #satellite-data-panel dt {
     font-weight: 600;
 }
 #satellite-data-panel dt small {
     display: block;
-    color: #66756f;
+    color: #8ba2ae;
     font-size: 10px;
     font-weight: 400;
     line-height: 1.35;
@@ -115,12 +119,29 @@ SATELLITE_DATA_PANEL_STYLE = """
     overflow: auto;
     margin: 0;
     padding: 8px;
-    background: #f4f6f5;
-    border: 1px solid #cbd5d1;
+    background: #07131f;
+    border: 1px solid #304653;
     border-radius: 4px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     font: 10px/1.4 monospace;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    color: #dce8ec;
+    background: #101e2b;
+}
+.leaflet-control-zoom a {
+    color: #dce8ec !important;
+    background: #101e2b !important;
+    border-color: #405260 !important;
+}
+.leaflet-control-attribution {
+    color: #a8bbc3;
+    background: rgba(10, 20, 31, .82) !important;
+}
+.leaflet-control-attribution a {
+    color: #83c8d0;
 }
 @media (max-width: 700px) {
     #satellite-data-panel {
@@ -188,63 +209,49 @@ def create_selection_page(error_message=""):
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Silmaril: Satellite Tracker</title>
-    <style>
-        :root {{ color-scheme: light; font-family: "Segoe UI", sans-serif; }}
-        * {{ box-sizing: border-box; }}
-        body {{ display: flex; flex-direction: column; margin: 0; min-height: 100vh; color: #182b32; background: #edf1ef; }}
-        header {{ padding: 22px clamp(20px, 6vw, 72px); background: #182b32; color: #fff; }}
-        .brand {{ max-width: 100%; margin: 0 auto; text-align: center; }}
-        .brand-title {{ color: #fff; font-size: 48px; font-weight: 700; text-decoration: none; }}
-        .brand-links {{ display: flex; justify-content: center; gap: 16px; margin-top: 8px; font-size: 13px; }}
-        .brand-links a {{ color: #c8ded8; }}
-        main {{ display: flex; flex: 1; flex-direction: column; align-items: center; width: 100%; max-width: 780px; margin: 0 auto; padding: clamp(36px, 7vh, 72px) 20px 40px; text-align: center; }}
-        .intro {{ max-width: 620px; }}
-        .intro h1 {{ margin: 0 0 14px; font-size: 30px; line-height: 1.15; }}
-        .intro p {{ margin: 0; font-size: 17px; line-height: 1.6; }}
-        .selector {{ display: flex; flex-direction: column; align-items: center; width: 100%; }}
-        .selector h2 {{ margin: 0 0 6px; font-size: 24px; }}
-        .form-hint {{ margin: 0; color: #66756f; font-size: 12px; line-height: 1.4; }}
-        form {{ width: 100%; max-width: 440px; margin: 20px; padding: 24px; background: #fff; border: 1px solid #cbd5d1; border-radius: 6px; text-align: left; }}
-        label {{ display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; }}
-        input {{ width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #83938e; border-radius: 4px; font: inherit; }}
-        button {{ width: 100%; min-height: 46px; margin-top: 14px; border: 0; border-radius: 4px; background: #b83b35; color: #fff; font: 600 15px "Segoe UI", sans-serif; cursor: pointer; }}
-        button:hover {{ background: #982f2a; }}
-        button:disabled {{ opacity: .7; cursor: wait; }}
-        .selection-error {{ width: 100%; max-width: 440px; margin: 0 0 12px; color: #8f221d; }}
-        @media (max-width: 480px) {{ .brand-links {{ flex-wrap: wrap; }} form {{ padding: 18px; }} }}
-    </style>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <header>
         <div class="brand">
-            <a class="brand-title" href="https://github.com/carsonmorris/Silmaril" target="_blank" rel="noopener noreferrer"><i>Silmaril</i>: Satellite Tracker</a>
+            <a class="brand-title" href="https://github.com/carsonmorris/Silmaril" target="_blank" rel="noopener noreferrer"><span class="brand-gem" aria-hidden="true"></span><i>Silmaril</i><span>Orbital tracking</span></a>
             <div class="brand-links">
                 <a href="https://github.com/carsonmorris/Silmaril" target="_blank" rel="noopener noreferrer">GitHub repository</a>
-                <span>Created by Carson Morris - 2026</span>
                 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0 1.0 Universal</a>
-                <span>Orbital data sourced from <a href="https://celestrak.org" target="_blank" rel="noopener noreferrer">CelesTrak</a></span>
+                <span>Data from <a href="https://celestrak.org" target="_blank" rel="noopener noreferrer">CelesTrak</a></span>
             </div>
         </div>
     </header>
     <main>
         <section class="intro" aria-labelledby="about-title">
-            <h1 id="about-title">Objects in Orbit</h1>
-            <p><i>Silmaril</i> calculates satellite positions from orbital data and brings them to life on a live map. Built to explore orbital mechanics and live visual tracking.</p>
-            <p><br>“And thus it came to pass that the Silmarils found their long homes: one in the airs of heaven, and one in the fires of the heart of the world, and one in the deep waters.” ― J.R.R. Tolkien, The Silmarillion</p>
-            <p><br>Enter a NORAD (North American Aerospace Defense Command) catalog number to track a satellite in real-time.<br></p>
+            <p class="eyebrow">SILMARIL / LIVE ORBITAL OBSERVATION</p>
+            <h1 id="about-title">A little light<br>in the <span>vastness.</span></h1>
+            <p class="intro-copy"><i>Silmaril</i> brings satellites within reach. Follow their live positions across Earth and explore the paths traced through the night sky.</p>
+            <div class="silmaril-note"><strong>Silmaril</strong><span>“And thus it came to pass that the Silmarils found their long homes: one in the airs of heaven, and one in the fires of the heart of the world, and one in the deep waters.” <br> ― J.R.R. Tolkien, The Silmarillion</span></div>
+            <section class="selector" aria-labelledby="selector-title">
+                <form id="satellite-form" action="/map" method="get">
+                    <div class="form-heading">
+                        <h2 id="selector-title">Lock onto an object</h2>
+                        <span class="form-status">TRACKING READY</span>
+                    </div>
+                    {error_html}
+                    <p class="form-hint">Enter a NORAD catalog number to acquire its live orbital position. Try the ISS: <strong>25544</strong>.</p>
+                    <label for="catalog-number">NORAD CATALOG NUMBER</label>
+                    <input id="catalog-number" name="catalog_number" type="number" min="1" step="1" placeholder="e.g. 25544" value="" required autofocus>
+                    <button id="submit-button" type="submit">Open live tracking</button>
+                </form>
+            </section>
         </section>
-        <section class="selector" aria-labelledby="selector-title">
-            
-            <form id="satellite-form" action="/map" method="get">
-				<h2 id="selector-title">Choose a satellite to track</h2>
-				{error_html}
-                <p class="form-hint"><i>Hint: The International Space Station's NORAD catalog number is 25544.</i></p>
-                <label for="catalog-number">NORAD catalog number</label>
-                <input id="catalog-number" name="catalog_number" type="number" min="1" step="1" value="" required autofocus>
-                <button id="submit-button" type="submit">Open live map</button>
-            </form>
-        </section>
+        <div class="orbital-visual" role="img" aria-label="A glowing Earth encircled by the orbit of a satellite">
+            <span class="orbit orbit-one" aria-hidden="true"><span class="orbit-dot"></span></span>
+            <span class="orbit orbit-two" aria-hidden="true"></span>
+            <span class="orbit orbit-three" aria-hidden="true"></span>
+            <span class="earth" aria-hidden="true"><img src="/img/earth-blue-marble.png" alt=""></span>
+            <span class="visual-coordinate" aria-hidden="true">ORBITAL VIEW<br>ALT 408 KM<br>INCL 51.6°</span>
+            <span class="visual-caption" aria-hidden="true"><strong>LOW EARTH ORBIT</strong>OBJECTS IN MOTION</span>
+        </div>
     </main>
+    <footer>Made by <span>Carson Morris</span> · 2026 · Earth imagery: <a href="https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/" target="_blank" rel="noopener noreferrer">NASA/GSFC Blue Marble</a></footer>
     <script>
         document.getElementById("satellite-form").addEventListener("submit", () => {{
             const button = document.getElementById("submit-button");
@@ -321,13 +328,33 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
     location_map = folium.Map(
         location=[position["latitude"], position["longitude"]],
         zoom_start=4,
+        minZoom=3,
         tiles=None,
         max_bounds=True,
     )
     # Keep the map to one world and prevent Esri tiles from wrapping horizontally.
     folium.TileLayer(
-        tiles="Esri.WorldStreetMap",
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/"
+            "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr=(
+            "Tiles © Esri — Sources: Esri, HERE, Garmin, USGS, "
+            "© OpenStreetMap contributors, and the GIS User Community"
+        ),
+        name="Dark basemap",
         no_wrap=True,
+    ).add_to(location_map)
+    folium.TileLayer(
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/"
+            "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr="Labels © Esri",
+        name="Dark map labels",
+        no_wrap=True,
+        overlay=True,
+        control=False,
     ).add_to(location_map)
 
     satellite_icon = folium.CustomIcon(
@@ -360,11 +387,11 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         '</div>'
         '<style>'
         '#trail-duration-control{position:fixed;top:12px;left:50%;transform:translateX(-50%);'
-        'z-index:9999;display:flex;padding:3px;background:#fff;border:1px solid #777;'
+        'z-index:9999;display:flex;padding:3px;background:rgba(10,20,31,.96);border:1px solid #405260;'
         'border-radius:6px;box-shadow:0 1px 4px #5558}'
         '#trail-duration-control button{padding:6px 10px;border:0;background:transparent;'
-        'color:#222;font:13px sans-serif;cursor:pointer}'
-        '#trail-duration-control button[aria-pressed="true"]{background:#d94841;'
+        'color:#dce8ec;font:13px sans-serif;cursor:pointer}'
+        '#trail-duration-control button[aria-pressed="true"]{background:#167b87;'
         'color:#fff;border-radius:4px}'
         '@media(max-width:700px){ #trail-duration-control{top:100px;left:12px;transform:none}}'
         '</style>'
@@ -385,14 +412,14 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         '<style>'
         '#silmaril-brand{position:fixed;top:12px;left:12px;z-index:9999;'
         'box-sizing:border-box;max-width:calc(100vw - 24px);padding:9px 12px;'
-        'background:rgba(255,255,255,.96);border:1px solid #777;border-left:3px solid #d94841;'
-        'border-radius:5px;box-shadow:0 1px 4px #5558;font:13px sans-serif;color:#222}'
-        '#silmaril-brand-title{display:block;color:#222;font-size:15px;font-weight:700;'
+        'background:rgba(10,20,31,.96);border:1px solid #405260;border-left:3px solid #7ce8e5;'
+        'border-radius:5px;box-shadow:0 1px 4px #0008;font:13px sans-serif;color:#dce8ec}'
+        '#silmaril-brand-title{display:block;color:#edf5f7;font-size:15px;font-weight:700;'
         'text-decoration:none;white-space:nowrap}'
         '#silmaril-brand-links{display:flex;gap:12px;margin-top:5px;font-size:12px}'
-        '#silmaril-brand-links a:first-child{color:#315c75}'
-        '#silmaril-brand-links a:last-child{color:#555}'
-        '#silmaril-author{margin-top:4px;color:#555;font-size:11px}'
+        '#silmaril-brand-links a:first-child{color:#83c8d0}'
+        '#silmaril-brand-links a:last-child{color:#a8bbc3}'
+        '#silmaril-author{margin-top:4px;color:#8ba2ae;font-size:11px}'
         '@media(max-width:700px){ #trail-duration-control{top:105px;left:12px;transform:none}}'
         '</style>'
     ))
@@ -415,8 +442,9 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
     # Show the last successful update time or an error from the position request in the bottom left.
     location_map.get_root().html.add_child(Element(
         '<div id="position-status" style="position: fixed; bottom: 16px; '
-        'left: 16px; z-index: 9999; padding: 8px 12px; background: white; '
-        'border: 1px solid #777; font: 13px sans-serif;">Starting live updates</div>'
+        'left: 16px; z-index: 9999; padding: 8px 12px; background: rgba(10,20,31,.96); '
+        'border: 1px solid #405260; border-radius: 4px; color: #dce8ec; '
+        'font: 13px sans-serif;">Starting live updates</div>'
     ))
 
     # Keep timestamped samples in the browser so duration changes do not need a server request.
@@ -453,7 +481,7 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         if (segment.length > 0) segments.push(segment);
 
         for (const points of segments) {{
-            L.polyline(points, {{ color: "#d94841", weight: 3, opacity: 0.8 }}).addTo(trailGroup);
+            L.polyline(points, {{ color: "#7ce8e5", weight: 3, opacity: 0.9 }}).addTo(trailGroup);
         }}
         lastTrailRedraw = newestSample[2];
     }}
@@ -579,8 +607,22 @@ def main():
             request = urlparse(self.path)
             query = parse_qs(request.query)
 
+            if request.path == "/styles.css":
+                stylesheet = Path(__file__).resolve().parent / "styles.css"
+                self.send_content(
+                    200,
+                    "text/css; charset=utf-8",
+                    stylesheet.read_text(encoding="utf-8"),
+                )
+            elif request.path == "/img/earth-blue-marble.png":
+                earth_image = Path(__file__).resolve().parent / "img" / "earth-blue-marble.png"
+                self.send_content(
+                    200,
+                    "image/png",
+                    earth_image.read_bytes(),
+                )
             # Open the branded selection screen before asking CelesTrak for any data.
-            if request.path == "/":
+            elif request.path == "/":
                 self.send_content(200, "text/html; charset=utf-8", create_selection_page())
             elif request.path == "/map":
                 catalog_input = query.get("catalog_number", [""])[0]

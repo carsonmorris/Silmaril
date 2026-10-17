@@ -1,6 +1,6 @@
 # Author: Carson Morris
-# Silmaril - Created: September 28, 2026
-# Celestrak Data Fetcher. Retrieve orbital data for satellites from Celestrak.
+# Silmaril - Created at: September 28, 2026
+# Description: Fetch orbital data for satellites from CelesTrak.
 
 import requests
 
@@ -29,4 +29,3 @@ def get_satellite_data(catalog_number):
     response.raise_for_status()
 
     return response.json()
-
