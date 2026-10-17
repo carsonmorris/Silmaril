@@ -37,7 +37,7 @@ SATELLITE_DATA_PANEL_STYLE = """
     left: 12px;
     z-index: 9998;
     width: min(340px, calc(100vw - 24px));
-    color: #222;
+    color: #dce8ec;
     font: 13px sans-serif;
 }
 #satellite-data-panel[open] {
@@ -46,8 +46,8 @@ SATELLITE_DATA_PANEL_STYLE = """
 }
 #satellite-data-panel summary {
     padding: 9px 12px;
-    background: rgba(255, 255, 255, .96);
-    border: 1px solid #777;
+    background: rgba(10, 20, 31, .96);
+    border: 1px solid #405260;
     border-radius: 5px;
     box-shadow: 0 1px 4px #5558;
     font-weight: 700;
@@ -63,15 +63,15 @@ SATELLITE_DATA_PANEL_STYLE = """
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 10px 12px;
-    background: rgba(255, 255, 255, .96);
-    border: 1px solid #777;
+    background: rgba(10, 20, 31, .96);
+    border: 1px solid #405260;
     border-top: 0;
     border-radius: 0 0 5px 5px;
 }
 #satellite-data-panel .satellite-data-section + .satellite-data-section {
     margin-top: 10px;
     padding-top: 8px;
-    border-top: 1px solid #cbd5d1;
+    border-top: 1px solid #263945;
 }
 #satellite-data-panel h3 {
     margin: 0 0 5px;
@@ -85,14 +85,14 @@ SATELLITE_DATA_PANEL_STYLE = """
     grid-template-columns: minmax(0, 1fr) minmax(70px, auto);
     gap: 4px 10px;
     padding: 5px 0;
-    border-bottom: 1px solid #e3e8e5;
+    border-bottom: 1px solid #223440;
 }
 #satellite-data-panel dt {
     font-weight: 600;
 }
 #satellite-data-panel dt small {
     display: block;
-    color: #66756f;
+    color: #8ba2ae;
     font-size: 10px;
     font-weight: 400;
     line-height: 1.35;
@@ -119,12 +119,29 @@ SATELLITE_DATA_PANEL_STYLE = """
     overflow: auto;
     margin: 0;
     padding: 8px;
-    background: #f4f6f5;
-    border: 1px solid #cbd5d1;
+    background: #07131f;
+    border: 1px solid #304653;
     border-radius: 4px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     font: 10px/1.4 monospace;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    color: #dce8ec;
+    background: #101e2b;
+}
+.leaflet-control-zoom a {
+    color: #dce8ec !important;
+    background: #101e2b !important;
+    border-color: #405260 !important;
+}
+.leaflet-control-attribution {
+    color: #a8bbc3;
+    background: rgba(10, 20, 31, .82) !important;
+}
+.leaflet-control-attribution a {
+    color: #83c8d0;
 }
 @media (max-width: 700px) {
     #satellite-data-panel {
@@ -311,13 +328,33 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
     location_map = folium.Map(
         location=[position["latitude"], position["longitude"]],
         zoom_start=4,
+        minZoom=3,
         tiles=None,
         max_bounds=True,
     )
     # Keep the map to one world and prevent Esri tiles from wrapping horizontally.
     folium.TileLayer(
-        tiles="Esri.WorldStreetMap",
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/"
+            "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr=(
+            "Tiles © Esri — Sources: Esri, HERE, Garmin, USGS, "
+            "© OpenStreetMap contributors, and the GIS User Community"
+        ),
+        name="Dark basemap",
         no_wrap=True,
+    ).add_to(location_map)
+    folium.TileLayer(
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/"
+            "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr="Labels © Esri",
+        name="Dark map labels",
+        no_wrap=True,
+        overlay=True,
+        control=False,
     ).add_to(location_map)
 
     satellite_icon = folium.CustomIcon(
@@ -350,11 +387,11 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         '</div>'
         '<style>'
         '#trail-duration-control{position:fixed;top:12px;left:50%;transform:translateX(-50%);'
-        'z-index:9999;display:flex;padding:3px;background:#fff;border:1px solid #777;'
+        'z-index:9999;display:flex;padding:3px;background:rgba(10,20,31,.96);border:1px solid #405260;'
         'border-radius:6px;box-shadow:0 1px 4px #5558}'
         '#trail-duration-control button{padding:6px 10px;border:0;background:transparent;'
-        'color:#222;font:13px sans-serif;cursor:pointer}'
-        '#trail-duration-control button[aria-pressed="true"]{background:#d94841;'
+        'color:#dce8ec;font:13px sans-serif;cursor:pointer}'
+        '#trail-duration-control button[aria-pressed="true"]{background:#167b87;'
         'color:#fff;border-radius:4px}'
         '@media(max-width:700px){ #trail-duration-control{top:100px;left:12px;transform:none}}'
         '</style>'
@@ -375,14 +412,14 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         '<style>'
         '#silmaril-brand{position:fixed;top:12px;left:12px;z-index:9999;'
         'box-sizing:border-box;max-width:calc(100vw - 24px);padding:9px 12px;'
-        'background:rgba(255,255,255,.96);border:1px solid #777;border-left:3px solid #d94841;'
-        'border-radius:5px;box-shadow:0 1px 4px #5558;font:13px sans-serif;color:#222}'
-        '#silmaril-brand-title{display:block;color:#222;font-size:15px;font-weight:700;'
+        'background:rgba(10,20,31,.96);border:1px solid #405260;border-left:3px solid #7ce8e5;'
+        'border-radius:5px;box-shadow:0 1px 4px #0008;font:13px sans-serif;color:#dce8ec}'
+        '#silmaril-brand-title{display:block;color:#edf5f7;font-size:15px;font-weight:700;'
         'text-decoration:none;white-space:nowrap}'
         '#silmaril-brand-links{display:flex;gap:12px;margin-top:5px;font-size:12px}'
-        '#silmaril-brand-links a:first-child{color:#315c75}'
-        '#silmaril-brand-links a:last-child{color:#555}'
-        '#silmaril-author{margin-top:4px;color:#555;font-size:11px}'
+        '#silmaril-brand-links a:first-child{color:#83c8d0}'
+        '#silmaril-brand-links a:last-child{color:#a8bbc3}'
+        '#silmaril-author{margin-top:4px;color:#8ba2ae;font-size:11px}'
         '@media(max-width:700px){ #trail-duration-control{top:105px;left:12px;transform:none}}'
         '</style>'
     ))
@@ -405,8 +442,9 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
     # Show the last successful update time or an error from the position request in the bottom left.
     location_map.get_root().html.add_child(Element(
         '<div id="position-status" style="position: fixed; bottom: 16px; '
-        'left: 16px; z-index: 9999; padding: 8px 12px; background: white; '
-        'border: 1px solid #777; font: 13px sans-serif;">Starting live updates</div>'
+        'left: 16px; z-index: 9999; padding: 8px 12px; background: rgba(10,20,31,.96); '
+        'border: 1px solid #405260; border-radius: 4px; color: #dce8ec; '
+        'font: 13px sans-serif;">Starting live updates</div>'
     ))
 
     # Keep timestamped samples in the browser so duration changes do not need a server request.
@@ -443,7 +481,7 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         if (segment.length > 0) segments.push(segment);
 
         for (const points of segments) {{
-            L.polyline(points, {{ color: "#d94841", weight: 3, opacity: 0.8 }}).addTo(trailGroup);
+            L.polyline(points, {{ color: "#7ce8e5", weight: 3, opacity: 0.9 }}).addTo(trailGroup);
         }}
         lastTrailRedraw = newestSample[2];
     }}
