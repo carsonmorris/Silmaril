@@ -1,72 +1,73 @@
 # Author: Carson Morris
 # Silmaril - Created at: September 28, 2026
 # Description: Define data models for satellite orbital elements and metadata.
+"""Parse CelesTrak OMM JSON into structured orbital and metadata models."""
 
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-# Take the JSON data returned from CelesTrak and parse it into a structured format
-
-# Orbital data describing a satellite's orbit.
 class OrbitalElements(BaseModel):
+    """Validated orbital-element fields returned by CelesTrak's GP endpoint."""
+
     epoch: datetime = Field(
         alias="EPOCH",
         title="Epoch",
-        description="Reference date and time for these orbital elements.",
+        description="Date and time at which the orbital data is considered accurate.",
     )
     mean_motion: float = Field(
         alias="MEAN_MOTION",
         title="Mean motion",
-        description="Average orbital revolutions per day.",
+        description="How quickly the satellite orbits, expressed in revolutions per day.",
     )
     mean_motion_dot: float = Field(
         alias="MEAN_MOTION_DOT",
         title="Mean motion derivative",
-        description="First derivative of mean motion, in revolutions per day squared.",
+        description="How mean motion changes over time, in revolutions per day squared.",
     )
     mean_motion_ddot: float = Field(
         alias="MEAN_MOTION_DDOT",
         title="Mean motion second derivative",
-        description="Second derivative of mean motion, in revolutions per day cubed.",
+        description="How the mean motion derivative changes, in revolutions per day cubed.",
     )
     eccentricity: float = Field(
         alias="ECCENTRICITY",
         title="Eccentricity",
-        description="Unitless measure of how elliptical the orbit is.",
+        description="How stretched the orbit is; low eccentricity means nearly circular.",
     )
     inclination: float = Field(
         alias="INCLINATION",
         title="Inclination",
-        description="Orbital plane tilt relative to the equator, in degrees.",
+        description="How tilted the orbit is relative to Earth; zero degrees is in line with the equator.",
     )
     ra_of_asc_node: float = Field(
         alias="RA_OF_ASC_NODE",
-        title="Ascending node (RAAN)",
-        description="Direction of the orbital plane, in degrees.",
+        title="RAAN",
+        description="Right Ascension of the Ascending Node; the orientation of the orbital plane around Earth.",
     )
     arg_of_pericenter: float = Field(
         alias="ARG_OF_PERICENTER",
-        title="Argument of pericenter",
-        description="Orientation of the orbit's closest point, in degrees.",
+        title="Argument of perigee",
+        description="The orientation of the orbit's closest point to Earth.",
     )
     mean_anomaly: float = Field(
         alias="MEAN_ANOMALY",
         title="Mean anomaly",
-        description="Satellite position along its orbit at the epoch, in degrees.",
+        description="A steadily increasing mathematical angle used to track position along an elliptical orbit.",
     )
     bstar: float = Field(
         alias="BSTAR",
-        title="B* drag term",
-        description="Atmospheric drag term used by the SGP4 model.",
+        title="BSTAR",
+        description="A parameter used to model atmospheric drag.",
     )
     rev_at_epoch: int = Field(
         alias="REV_AT_EPOCH",
         title="Revolutions at epoch",
-        description="Orbit revolution count at the reference epoch.",
+        description="The satellite's orbit revolution count at the epoch.",
     )
 
-# Orbital metadata describing the satellite itself.
 class OrbitalMetadata(BaseModel):
+    """Validated identity and catalog metadata returned with a GP record."""
+
     object_name: str = Field(
         alias="OBJECT_NAME",
         title="Object name",

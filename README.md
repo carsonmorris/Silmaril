@@ -18,7 +18,7 @@
 
 Silmaril retrieves orbital data, propagates satellite positions with **SGP4**, and displays a selected object's live location on an interactive map. The project explores orbital mechanics, satellite data, backend development, and interactive visualization.
 
-The map uses Esri WorldStreetMap and includes a calculated 24-hour orbital trail, viewable over 1, 6, or 24 hours. Trail positions are calculated from orbital data rather than loaded from historical tracking records. A REST API, 3D Earth visualization, and satellite pass predictions are possible directions for future development.
+The map uses Esri's dark-gray basemap and reference labels and includes a calculated 24-hour orbital trail, viewable over 1, 6, or 24 hours. Trail positions are calculated from orbital data rather than loaded from historical tracking records. A REST API, 3D Earth visualization, and satellite pass predictions are possible directions for future development.
 
 Position calculations have been verified against [AstroViewer's ISS tracker](https://www.astroviewer.net/iss/en/).
 
@@ -32,7 +32,9 @@ Position calculations have been verified against [AstroViewer's ISS tracker](htt
 
 ## Orbital data
 
-Initial orbital data comes from [CelesTrak](https://celestrak.org), using OMM JSON. Silmaril stores each satellite's complete OMM record and cache timestamp in `data/satellites.db`. Cached records are refreshed after three hours; uncached records are fetched from CelesTrak and stored in SQLite.
+The app reads its satellite catalog and cached orbital data from a pre-populated local SQLite database (`data/satellites.db`). Missing orbital records are retrieved from CelesTrak, and cached orbital data older than three hours is refreshed when that satellite is selected.
+
+The landing page reports the number of non-decayed Earth-orbiting objects with a confirmed, non-empty CelesTrak GP record in the local cache; SATCAT's element-availability flag alone does not guarantee that CelesTrak has a record for an object. A view switch lets users return to the featured notable satellites or browse the full cached catalog as a visible, paginated list of 50 objects at a time. Search works by object name or NORAD number, and users track an object by selecting it from the list. An empty response from CelesTrak is not cached and removes any older cached record for that object. The map position is calculated for the current time. A curated notable list includes the ISS, Hubble, Tiangong, NOAA weather satellites, Terra, Aqua, Landsat 9, Sentinel-2A, GOES-16, and Suomi NPP. Objects like the James Webb Space Telescope are not included because CelesTrak does not provide GP orbital elements for them.
 
 ## Project structure
 
@@ -45,7 +47,6 @@ silmaril/
 ├── scripts/
 ├── tests/
 ├── main.py
-├── satellite_map.html
 ├── styles.css
 ├── requirements.txt
 └── README.md
@@ -167,13 +168,16 @@ Example: ISS orbital data (catalog number 25544, JSON): https://celestrak.org/NO
 
 * **OMM** — Orbit Mean-Elements Message.
 * **Epoch** — Date and time at which the orbital data is considered accurate.
-* **Inclination** — How tilted the orbit is relative to Earth; 0° is in line with the equator.
+* **Inclination** — How tilted the orbit is relative to Earth; zero degrees is in line with the equator.
 * **Eccentricity** — How stretched the orbit is; low eccentricity means nearly circular.
 * **Mean motion** — How quickly the satellite orbits, expressed in revolutions per day.
 * **RAAN** — Right Ascension of the Ascending Node; the orientation of the orbital plane around Earth.
 * **Mean anomaly** — A steadily increasing mathematical angle used to track position along an elliptical orbit.
 * **Argument of perigee** — The orientation of the orbit's closest point to Earth.
 * **BSTAR** — A parameter used to model atmospheric drag.
+* **Mean motion derivative** — How mean motion changes over time, in revolutions per day squared.
+* **Mean motion second derivative** — How the mean motion derivative changes, in revolutions per day cubed.
+* **Revolutions at epoch** — The satellite's orbit revolution count at the epoch.
 
 <div align="center">
 

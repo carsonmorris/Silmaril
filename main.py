@@ -7,7 +7,7 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 import webbrowser
 
 # World map library for visualizing satellite positions
@@ -18,7 +18,12 @@ from branca.element import Element
 from backend.coordinates import ecef_to_geodetic, teme_to_ecef
 from backend.models import OrbitalElements, OrbitalMetadata
 from backend.propagator import create_satrec, propagate_satellite
-from data.satellite_data import get_satellite_data
+from data.satellite_data import (
+    get_satellite_catalog,
+    get_satellite_data,
+    is_catalog_number_known,
+    load_satellite_catalog,
+)
 
 
 # Interval settings for satellite tracking and path visualization
@@ -28,6 +33,20 @@ PATH_SAMPLE_INTERVAL_SECONDS = 10
 TRAIL_REDRAW_INTERVAL_SECONDS = 10
 MAX_TRAIL_AGE_SECONDS = PATH_HISTORY_HOURS * 60 * 60
 INITIAL_VIEW_WINDOW_MINUTES = 10
+NOTABLE_SATELLITES = {
+    25544: "International Space Station",
+    20580: "Hubble Space Telescope",
+    48274: "Tiangong Space Station",
+    43013: "NOAA-20 Weather Satellite",
+    54234: "NOAA-21 Weather Satellite",
+    33591: "NOAA-19 Weather Satellite",
+    25994: "Terra Earth Observation Satellite",
+    27424: "Aqua Earth Observation Satellite",
+    49260: "Landsat 9 Earth Imaging Satellite",
+    40697: "Sentinel-2A Earth Imaging Satellite",
+    41866: "GOES-16 Weather Satellite",
+    37849: "Suomi NPP Weather Satellite",
+}
 
 SATELLITE_DATA_PANEL_STYLE = """
 <style>
@@ -52,6 +71,33 @@ SATELLITE_DATA_PANEL_STYLE = """
     box-shadow: 0 1px 4px #5558;
     font-weight: 700;
     cursor: pointer;
+}
+#satellite-data-panel > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+}
+#satellite-data-panel > summary::-webkit-details-marker {
+    display: none;
+}
+#satellite-data-panel > summary::after {
+    width: 7px;
+    height: 7px;
+    margin-left: 12px;
+    border-right: 2px solid #7ce8e5;
+    border-bottom: 2px solid #7ce8e5;
+    content: "";
+    flex: 0 0 auto;
+    transform: rotate(-45deg);
+    transition: transform .18s ease;
+}
+#satellite-data-panel[open] > summary::after {
+    transform: rotate(45deg);
+}
+#satellite-data-panel > summary:focus-visible {
+    outline: 2px solid #7ce8e5;
+    outline-offset: 2px;
 }
 #satellite-data-panel[open] summary {
     border-radius: 5px 5px 0 0;
@@ -159,6 +205,7 @@ SATELLITE_DATA_PANEL_STYLE = """
 
 
 def get_current_position(satellite, current_time=None):
+    """Propagate a satellite and return its map-ready position and UTC timestamps."""
     # Use the current UTC time for live updates, or a supplied time for path history.
     if current_time is None:
         current_time = datetime.now(timezone.utc)
@@ -177,8 +224,8 @@ def get_current_position(satellite, current_time=None):
         "timestamp_unix": current_time.timestamp(),
     }
 
-# Sample the past day at a fixed interval so the user can choose a trail duration.
 def get_path_history(satellite, end_time):
+    """Calculate timestamped positions across the configured history window."""
     start_time = end_time - timedelta(hours=PATH_HISTORY_HOURS)
     number_of_steps = PATH_HISTORY_HOURS * 60 * 60 // PATH_SAMPLE_INTERVAL_SECONDS
     path = []
@@ -197,11 +244,207 @@ def get_path_history(satellite, end_time):
     return path
 
 
-def create_selection_page(error_message=""):
+def create_selection_page(
+    error_message="",
+    satellites=(),
+    selected_catalog_number="",
+    search_query="",
+    search_page=1,
+    page_size=50,
+    browse_all=False,
+):
+    """Render the featured-satellite selector or a page of catalog search results."""
     # Escape server errors before showing them in the HTML selection page.
     error_html = ""
     if error_message:
         error_html = f'<p class="selection-error" role="alert">{escape(error_message)}</p>'
+
+    satellites_by_number = {
+        satellite["catalog_number"]: satellite for satellite in satellites
+    }
+
+    def render_satellite_choice(satellite):
+        catalog_number = satellite["catalog_number"]
+        selected = (
+            " checked"
+            if str(catalog_number) == str(selected_catalog_number)
+            else ""
+        )
+        return (
+            '<label class="catalog-object">'
+            f'<input type="radio" name="catalog_selection" value="{catalog_number}"'
+            f'{selected} required>'
+            '<span class="catalog-object-name">'
+            f'{escape(NOTABLE_SATELLITES.get(catalog_number, satellite["object_name"]))}'
+            '</span><span class="catalog-object-id">'
+            f'NORAD {catalog_number}'
+            + (
+                '<span class="catalog-object-type">SPACE DEBRIS</span>'
+                if satellite.get("object_type") == "DEB"
+                else ""
+            )
+            + "</span></label>"
+        )
+
+    # Keep the curated order while omitting featured objects absent from this cache.
+    notable_satellites = [
+        satellites_by_number[catalog_number]
+        for catalog_number in NOTABLE_SATELLITES
+        if catalog_number in satellites_by_number
+    ]
+    search_query = search_query.strip()
+    matching_satellites = list(satellites) if browse_all else []
+    if search_query:
+        normalized_query = search_query.casefold()
+        # Search both catalog names and featured display names, which may differ.
+        matching_satellites = [
+            satellite
+            for satellite in satellites
+            if normalized_query in str(satellite["catalog_number"]).casefold()
+            or normalized_query in satellite["object_name"].casefold()
+            or normalized_query
+            in NOTABLE_SATELLITES.get(
+                satellite["catalog_number"], ""
+            ).casefold()
+        ]
+        matching_satellites.sort(
+            key=lambda satellite: (
+                str(satellite["catalog_number"]) != search_query,
+                satellite["object_name"].casefold(),
+                satellite["catalog_number"],
+            )
+        )
+
+    total_matches = len(matching_satellites)
+    # Clamp stale or invalid page numbers so slicing and navigation stay in range.
+    page_count = max(1, (total_matches + page_size - 1) // page_size)
+    search_page = min(max(1, int(search_page)), page_count)
+    start_index = (search_page - 1) * page_size
+    search_results = matching_satellites[start_index : start_index + page_size]
+    debris_satellites = [
+        satellite
+        for satellite in search_results
+        if satellite["catalog_number"] not in NOTABLE_SATELLITES
+        and satellite.get("object_type") == "DEB"
+    ]
+    other_satellites = [
+        satellite
+        for satellite in search_results
+        if satellite.get("object_type") != "DEB"
+    ]
+    show_featured = not search_query and not browse_all
+    catalog_choices = ""
+    if show_featured and notable_satellites:
+        catalog_choices += (
+            '<fieldset class="catalog-object-group catalog-notable-group">'
+            '<legend>Notable satellites</legend>'
+            + "".join(render_satellite_choice(item) for item in notable_satellites)
+            + "</fieldset>"
+        )
+    if (search_query or browse_all) and (debris_satellites or other_satellites):
+        if debris_satellites:
+            catalog_choices += (
+                '<fieldset class="catalog-object-group">'
+                '<legend>Space Debris</legend>'
+                + "".join(render_satellite_choice(item) for item in debris_satellites)
+                + "</fieldset>"
+            )
+        if other_satellites:
+            object_group_label = "Catalog objects" if browse_all else "Matching objects"
+            catalog_choices += (
+                f'<fieldset class="catalog-object-group"><legend>{object_group_label}</legend>'
+                + "".join(render_satellite_choice(item) for item in other_satellites)
+                + "</fieldset>"
+            )
+    if not catalog_choices:
+        catalog_choices = (
+            '<p class="catalog-empty">No trackable objects are available to display.</p>'
+        )
+    if search_query:
+        if total_matches:
+            range_start = start_index + 1
+            range_end = min(start_index + page_size, total_matches)
+            result_summary = (
+                f"Showing {range_start:,}–{range_end:,} of {total_matches:,} "
+                f"matches for “{escape(search_query)}”."
+            )
+        else:
+            result_summary = f'No cached objects match “{escape(search_query)}”.'
+        pagination = ""
+        links = []
+        if page_count > 1:
+            if search_page > 1:
+                previous_query = urlencode(
+                    {"q": search_query, "page": search_page - 1}
+                )
+                links.append(
+                    f'<a class="catalog-page-button" href="/?{escape(previous_query)}">'
+                    f'← Previous {page_size}'
+                    "</a>"
+                )
+            links.append(f"<span>Page {search_page:,} of {page_count:,}</span>")
+            if search_page < page_count:
+                next_query = urlencode({"q": search_query, "page": search_page + 1})
+                links.append(
+                    f'<a class="catalog-page-button catalog-page-next" '
+                    f'href="/?{escape(next_query)}">Next {page_size} →</a>'
+                )
+        pagination_label = "Search result pages"
+    elif browse_all:
+        if total_matches:
+            range_start = start_index + 1
+            range_end = min(start_index + page_size, total_matches)
+            result_summary = (
+                f"Showing {range_start:,}–{range_end:,} of {total_matches:,} "
+                "trackable objects."
+            )
+        else:
+            result_summary = "There are no confirmed trackable objects in the local cache."
+        pagination = ""
+        if page_count > 1:
+            links = []
+            if search_page > 1:
+                previous_query = urlencode(
+                    {"browse": "1", "page": search_page - 1}
+                )
+                links.append(
+                    f'<a class="catalog-page-button" href="/?{escape(previous_query)}">'
+                    f'← Previous {page_size}'
+                    "</a>"
+                )
+            links.append(f"<span>Page {search_page:,} of {page_count:,}</span>")
+            if search_page < page_count:
+                next_query = urlencode(
+                    {"browse": "1", "page": search_page + 1}
+                )
+                links.append(
+                    f'<a class="catalog-page-button catalog-page-next" '
+                    f'href="/?{escape(next_query)}">Next {page_size} →</a>'
+                )
+        pagination_label = "Catalog pages"
+    else:
+        result_summary = (
+            "Search by name or NORAD number, or browse the full trackable list."
+        )
+        pagination = ""
+        pagination_label = "Catalog pages"
+        links = []
+    if (search_query or browse_all) and page_count > 1:
+        pagination = (
+            f'<nav class="catalog-pagination" aria-label="{pagination_label}">'
+            + " ".join(links)
+            + "</nav>"
+        )
+    catalog_status = "CATALOG READY" if satellites else "NO CACHED RECORDS"
+    if search_query:
+        view_title = "Search results"
+        view_description = f'Matches for “{escape(search_query)}”'
+    elif browse_all:
+        view_title = "Full trackable catalog"
+        view_description = "Browse every confirmed object in the local cache."
+    else:
+        view_title = "Notable satellites"
+        view_description = "Start with these featured objects, or browse the full catalog."
 
     return f"""<!doctype html>
 <html lang="en">
@@ -226,29 +469,63 @@ def create_selection_page(error_message=""):
         <section class="intro" aria-labelledby="about-title">
             <p class="eyebrow">SILMARIL / LIVE ORBITAL OBSERVATION</p>
             <h1 id="about-title">A little light<br>in the <span>vastness.</span></h1>
-            <p class="intro-copy"><i>Silmaril</i> brings satellites within reach. Follow their live positions across Earth and explore the paths traced through the night sky.</p>
-            <div class="silmaril-note"><strong>Silmaril</strong><span>“And thus it came to pass that the Silmarils found their long homes: one in the airs of heaven, and one in the fires of the heart of the world, and one in the deep waters.” <br> ― J.R.R. Tolkien, The Silmarillion</span></div>
             <section class="selector" aria-labelledby="selector-title">
-                <form id="satellite-form" action="/map" method="get">
-                    <div class="form-heading">
-                        <h2 id="selector-title">Lock onto an object</h2>
-                        <span class="form-status">TRACKING READY</span>
+                <div class="form-heading">
+                    <h2 id="selector-title">Lock onto an object</h2>
+                    <span class="form-status">{catalog_status}</span>
+                </div>
+                {error_html}
+                <div class="catalog-summary" aria-label="Available cached orbital records">
+                    <strong>{len(satellites):,}</strong>
+                    <span>objects with confirmed CelesTrak GP records in the local cache</span>
+                </div>
+                <p class="form-hint">This is the number of matching, non-empty GP records currently stored locally. Positions are calculated for the current time; orbital data is refreshed from CelesTrak on retrieval when its cache is older than three hours.</p>
+                <form class="catalog-search-form" action="/" method="get">
+                    <label for="catalog-search">FIND AN OBJECT BY NAME OR NORAD NUMBER</label>
+                    <div class="catalog-search-controls">
+                        <input id="catalog-search" name="q" type="search" value="{escape(search_query)}" placeholder="e.g. Hubble or 20580" autocomplete="off">
+                        <button type="submit">Search</button>
                     </div>
-                    {error_html}
-                    <p class="form-hint">Enter a NORAD catalog number to acquire its live orbital position. Try the ISS: <strong>25544</strong>.</p>
-                    <label for="catalog-number">NORAD CATALOG NUMBER</label>
-                    <input id="catalog-number" name="catalog_number" type="number" min="1" step="1" placeholder="e.g. 25544" value="" required autofocus>
+                </form>
+                <nav class="catalog-view-nav" aria-label="Choose catalog view">
+                    <a href="/?featured=1"{' aria-current="page"' if not search_query and not browse_all else ''}>Notable satellites</a>
+                    <a href="/?browse=1"{' aria-current="page"' if browse_all and not search_query else ''}>Full catalog <span>{len(satellites):,}</span></a>
+                </nav>
+                <div class="catalog-view-heading">
+                    <h3>{view_title}</h3>
+                    <p>{view_description}</p>
+                </div>
+                <p class="catalog-results-summary" aria-live="polite">{result_summary}</p>
+                <form class="catalog-search-form" id="satellite-form" action="/map" method="get">
+                    <input type="hidden" name="catalog_search" value="{escape(search_query)}">
+                    <input type="hidden" name="catalog_page" value="{search_page}">
+                    <input type="hidden" name="catalog_browse_all" value="{'1' if browse_all else ''}">
+                    <div class="catalog-object-list" aria-label="Trackable objects">
+                        {catalog_choices}
+                    </div>
                     <button id="submit-button" type="submit">Open live tracking</button>
                 </form>
+                {pagination}
             </section>
         </section>
-        <div class="orbital-visual" role="img" aria-label="A glowing Earth encircled by the orbit of a satellite">
-            <span class="orbit orbit-one" aria-hidden="true"><span class="orbit-dot"></span></span>
-            <span class="orbit orbit-two" aria-hidden="true"></span>
-            <span class="orbit orbit-three" aria-hidden="true"></span>
-            <span class="earth" aria-hidden="true"><img src="/img/earth-blue-marble.png" alt=""></span>
-            <span class="visual-coordinate" aria-hidden="true">ORBITAL VIEW<br>ALT 408 KM<br>INCL 51.6°</span>
-            <span class="visual-caption" aria-hidden="true"><strong>LOW EARTH ORBIT</strong>OBJECTS IN MOTION</span>
+        <div class="orbital-side">
+            <p class="intro-copy"><i>Silmaril</i> brings satellites within reach. Follow their live positions across Earth and explore the paths traced through the night sky.</p>
+            <div class="orbital-visual" role="img" aria-label="A glowing Earth encircled by the orbit of a satellite">
+                <span class="orbit orbit-one" aria-hidden="true"><span class="orbit-dot"></span></span>
+                <span class="orbit orbit-two" aria-hidden="true"></span>
+                <span class="orbit orbit-three" aria-hidden="true"></span>
+                <span class="earth" aria-hidden="true"><img src="/img/earth-blue-marble.png" alt=""></span>
+                <span class="visual-coordinate" aria-hidden="true">ORBITAL VIEW<br>ALT 408 KM<br>INCL 51.6°</span>
+                <span class="visual-caption" aria-hidden="true"><strong>LOW EARTH ORBIT</strong>OBJECTS IN MOTION</span>
+            </div>
+            <div class="silmaril-note">
+                <strong>Silmaril</strong>
+                <span>
+                    “And thus it came to pass that the Silmarils found their long homes: one in the airs of heaven, and one in the fires of the heart of the world, and one in the deep waters.”
+                    <br>― J.R.R. Tolkien, The Silmarillion
+                    <span class="dedication">Dedicated to my brother, Connor</span>
+                </span>
+            </div>
         </div>
     </main>
     <footer>Made by <span>Carson Morris</span> · 2026 · Earth imagery: <a href="https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/" target="_blank" rel="noopener noreferrer">NASA/GSFC Blue Marble</a></footer>
@@ -264,10 +541,12 @@ def create_selection_page(error_message=""):
 
 
 def escape_satellite_value(value):
+    """Escape satellite data for HTML text, including braces used by templates."""
     return escape(str(value)).replace("{", "&#123;").replace("}", "&#125;")
 
 
 def create_satellite_data_sections(satellite_data):
+    """Render known OMM fields with model descriptions and preserve extra fields."""
     def render_entry(label, value, description=""):
         description_html = f"<small>{escape(description)}</small>" if description else ""
         formatted_value = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
@@ -321,6 +600,7 @@ def create_satellite_data_sections(satellite_data):
 
 
 def create_map_page(catalog_number, satellite_name, position, path_history, satellite_data):
+    """Render the live Folium map and its satellite data, trail, and polling controls."""
     satellite_data_sections = create_satellite_data_sections(satellite_data)
     satellite_data_json = escape(json.dumps(satellite_data, indent=2, ensure_ascii=False))
     satellite_data_json = satellite_data_json.replace("{", "&#123;").replace("}", "&#125;")
@@ -357,10 +637,12 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
         control=False,
     ).add_to(location_map)
 
+    icon_name = "iss-icon.png" if catalog_number == 25544 else "satellite-icon.png"
+    icon_size = 48 if catalog_number == 25544 else 40
     satellite_icon = folium.CustomIcon(
-        icon_image=str(Path(__file__).resolve().parent / "img" / "satellite-icon.png"),
-        icon_size=(40, 40),
-        icon_anchor=(20, 20),
+        icon_image=str(Path(__file__).resolve().parent / "img" / icon_name),
+        icon_size=(icon_size, icon_size),
+        icon_anchor=(icon_size // 2, icon_size // 2),
     )
     # Place the marker at the first calculated position; the browser moves it on later updates.
     marker = folium.Marker(
@@ -472,6 +754,7 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
             const sample = trailSamples[index];
             if (sample[2] < cutoff) continue;
             if (previousLongitude !== null && Math.abs(sample[1] - previousLongitude) > 180) {{
+                // Separate segments so Leaflet does not draw across the whole map.
                 if (segment.length > 0) segments.push(segment);
                 segment = [];
             }}
@@ -514,6 +797,7 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
                 firstRetainedSample++;
             }}
             if (firstRetainedSample > 1024 && firstRetainedSample > trailSamples.length / 2) {{
+                // Reclaim discarded slots without shifting the array on every poll.
                 trailSamples = trailSamples.slice(firstRetainedSample);
                 firstRetainedSample = 0;
             }}
@@ -555,6 +839,7 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
             const sample = trailSamples[index];
             if (sample[2] < initialViewCutoff) continue;
             if (previousLongitude !== null && Math.abs(sample[1] - previousLongitude) > 180) {{
+                // Keep the initial bounds on one side of the date line.
                 initialViewPoints = [];
             }}
             initialViewPoints.push([sample[0], sample[1]]);
@@ -591,6 +876,7 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
 
 
 def main():
+    """Start the local web server and open the satellite selection page."""
     satellites_by_catalog = {}
 
     class LiveMapRequestHandler(BaseHTTPRequestHandler):
@@ -621,17 +907,64 @@ def main():
                     "image/png",
                     earth_image.read_bytes(),
                 )
-            # Open the branded selection screen before asking CelesTrak for any data.
+            # Read the pre-populated satellite catalog from the local database.
             elif request.path == "/":
-                self.send_content(200, "text/html; charset=utf-8", create_selection_page())
+                catalog_error = ""
+                try:
+                    satellites = get_satellite_catalog()
+                except (OSError, RuntimeError, ValueError) as error:
+                    satellites = []
+                    catalog_error = (
+                        "Could not load the local satellite catalog. "
+                        f"Satellite lookups are unavailable until it is initialized. {error}"
+                    )
+                try:
+                    search_page = int(query.get("page", ["1"])[0])
+                except ValueError:
+                    search_page = 1
+                self.send_content(
+                    200,
+                    "text/html; charset=utf-8",
+                    create_selection_page(
+                        catalog_error,
+                        satellites,
+                        search_query=query.get("q", [""])[0],
+                        search_page=search_page,
+                        browse_all=query.get("browse", [""])[0] == "1",
+                    ),
+                )
             elif request.path == "/map":
-                catalog_input = query.get("catalog_number", [""])[0]
+                try:
+                    catalog_page = int(query.get("catalog_page", ["1"])[0])
+                except ValueError:
+                    catalog_page = 1
+                catalog_input = query.get("catalog_selection", [""])[0].strip()
                 try:
                     catalog_number = int(catalog_input)
                     if catalog_number <= 0:
-                        raise ValueError("Enter a positive NORAD catalog number.")
+                        raise ValueError("Select a trackable object.")
                 except ValueError:
-                    page = create_selection_page("Enter a positive NORAD catalog number.")
+                    page = create_selection_page(
+                        "Choose a satellite from the featured list or catalog results.",
+                        load_satellite_catalog(),
+                        query.get("catalog_selection", [""])[0],
+                        search_query=query.get("catalog_search", [""])[0],
+                        search_page=catalog_page,
+                        browse_all=query.get("catalog_browse_all", [""])[0] == "1",
+                    )
+                    self.send_content(400, "text/html; charset=utf-8", page)
+                    return
+
+                # Reject unknown IDs from the local catalog before any CelesTrak request.
+                if not is_catalog_number_known(catalog_number):
+                    page = create_selection_page(
+                        f"NORAD catalog number {catalog_number} is not in the local CelesTrak registry. No network request was made.",
+                        load_satellite_catalog(),
+                        query.get("catalog_selection", [""])[0],
+                        search_query=query.get("catalog_search", [""])[0],
+                        search_page=catalog_page,
+                        browse_all=query.get("catalog_browse_all", [""])[0] == "1",
+                    )
                     self.send_content(400, "text/html; charset=utf-8", page)
                     return
 
@@ -656,7 +989,12 @@ def main():
                     self.send_content(200, "text/html; charset=utf-8", map_html)
                 except (IndexError, requests.RequestException, ValueError) as error:
                     page = create_selection_page(
-                        f"Could not load satellite {catalog_number}: {error}"
+                        f"Could not load satellite {catalog_number}: {error}",
+                        load_satellite_catalog(),
+                        str(catalog_number),
+                        search_query=query.get("catalog_search", [""])[0],
+                        search_page=catalog_page,
+                        browse_all=query.get("catalog_browse_all", [""])[0] == "1",
                     )
                     self.send_content(400, "text/html; charset=utf-8", page)
             elif request.path == "/position":
