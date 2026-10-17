@@ -1,3 +1,7 @@
+# Author: Carson Morris
+# Silmaril - Created at: September 29, 2026
+# Description: Manually inspect satellite coordinate conversions.
+
 from datetime import datetime, timezone
 
 from backend.propagator import create_satrec, propagate_satellite

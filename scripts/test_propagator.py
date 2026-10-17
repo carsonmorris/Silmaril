@@ -1,10 +1,14 @@
+# Author: Carson Morris
+# Silmaril - Created at: September 28, 2026
+# Description: Manually inspect satellite propagation at several epoch offsets.
+
 from datetime import timedelta
 
 from backend.propagator import propagate_satellite, create_satrec
 from data.satellite_data import get_satellite_data
 from sgp4.conveniences import sat_epoch_datetime
 
-# Test the satellite propagator. Retrieve the satellite info from 
+# Test the satellite propagator. Retrieve the satellite information from
 # CelesTrak, propagate to the current time, return its current position and velocity
 
 catalog_number = 25544

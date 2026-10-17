@@ -1,8 +1,12 @@
+# Author: Carson Morris
+# Silmaril - Created at: September 28, 2026
+# Description: Manually inspect CelesTrak satellite data and parsed models.
+
 from data.satellite_data import get_satellite_data
 from backend.models import OrbitalElements, OrbitalMetadata
 
 
-# Request the ISS data. Either from the Cache (if its new) or from Celestrak.
+# Request ISS data from the cache if current, or fetch it from CelesTrak.
 data = get_satellite_data(25544)
 iss = data[0]
 

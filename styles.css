@@ -1,0 +1,607 @@
+:root {
+    color-scheme: dark;
+    font-family: "Segoe UI", sans-serif;
+    background: #07111d;
+    color: #edf5f7;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    --muted: #94a9b6;
+    --cyan: #7ce8e5;
+    --gold: #f2d38a;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+    background:
+        radial-gradient(ellipse at 78% 42%, rgba(19, 67, 85, .28), transparent 36rem),
+        radial-gradient(ellipse at 12% 100%, rgba(20, 51, 72, .26), transparent 38rem),
+        #07111d;
+}
+
+body::before {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: radial-gradient(#a5d4da 0.7px, transparent 0.7px);
+    background-size: 46px 46px;
+    opacity: .13;
+    content: "";
+    mask-image: linear-gradient(to bottom, #000, transparent 88%);
+    pointer-events: none;
+}
+
+header {
+    position: relative;
+    z-index: 1;
+    padding: 22px clamp(20px, 6vw, 76px);
+    border-bottom: 1px solid rgba(147, 190, 201, .13);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+.brand-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: #f2f7f8;
+    font-size: 21px;
+    font-weight: 650;
+    letter-spacing: -.03em;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.brand-title i {
+    color: var(--gold);
+    font-family: Georgia, serif;
+    font-size: 28px;
+    font-weight: 500;
+}
+
+.brand-gem {
+    position: relative;
+    width: 25px;
+    height: 29px;
+    background: conic-gradient(
+        from -18deg at 50% 50%,
+        #fff4c9 0deg,
+        #f2d38a 42deg,
+        #fff8d8 72deg,
+        #79e8e5 118deg,
+        #4389bb 158deg,
+        #b8ffff 200deg,
+        #79e8e5 238deg,
+        #f2d38a 286deg,
+        #fff4c9 360deg
+    );
+    clip-path: polygon(50% 0, 60% 32%, 93% 25%, 68% 50%, 93% 75%, 60% 68%, 50% 100%, 40% 68%, 7% 75%, 32% 50%, 7% 25%, 40% 32%);
+    filter: drop-shadow(0 0 9px rgba(124, 232, 229, .55));
+}
+
+.brand-gem::before {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(30deg, transparent 49%, rgba(255, 255, 255, .38) 50%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(255, 255, 255, .38) 50%, transparent 51%),
+        linear-gradient(150deg, transparent 49%, rgba(255, 255, 255, .38) 50%, transparent 51%);
+    clip-path: inherit;
+    content: "";
+}
+
+.brand-gem::after {
+    position: absolute;
+    inset: 28% 28%;
+    background: linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(177, 255, 248, .2) 55%, rgba(20, 52, 91, .48));
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    content: "";
+}
+
+.brand-links {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    color: #708895;
+    font-size: 11px;
+}
+
+.brand-links a {
+    color: #b5c9d1;
+    text-decoration: none;
+}
+
+.brand-links a:hover {
+    color: var(--cyan);
+}
+
+main {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(300px, .96fr);
+    align-items: center;
+    gap: clamp(30px, 7vw, 88px);
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(46px, 9vh, 96px) 28px 72px;
+}
+
+.intro {
+    min-width: 0;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 23px;
+    color: var(--cyan);
+    font: 600 10px/1.4 "Segoe UI", sans-serif;
+    letter-spacing: .2em;
+}
+
+.eyebrow::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 12px rgba(124, 232, 229, .9);
+    content: "";
+}
+
+.intro h1 {
+    max-width: 600px;
+    margin: 0 0 18px;
+    color: #f3f7f7;
+    font-size: clamp(42px, 6vw, 68px);
+    font-weight: 500;
+    letter-spacing: -.055em;
+    line-height: .99;
+}
+
+.intro h1 span {
+    color: var(--gold);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.intro-copy {
+    max-width: 510px;
+    margin: 0;
+    color: #a3b6c0;
+    font-size: 16px;
+    line-height: 1.75;
+}
+
+.silmaril-note {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    max-width: 475px;
+    margin-top: 24px;
+    padding: 13px 15px;
+    border-left: 1px solid rgba(242, 211, 138, .65);
+    background: linear-gradient(90deg, rgba(242, 211, 138, .07), transparent);
+    color: #b5c4c8;
+    font: italic 13px/1.55 Georgia, serif;
+}
+
+.silmaril-note strong {
+    color: var(--gold);
+    font-weight: 500;
+}
+
+.selector {
+    width: 100%;
+    margin-top: 36px;
+}
+
+form {
+    width: 100%;
+    max-width: 500px;
+    margin: 0;
+    padding: 22px;
+    border: 1px solid rgba(145, 182, 194, .2);
+    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(19, 36, 52, .94), rgba(12, 24, 37, .96));
+    box-shadow: 0 20px 55px rgba(0, 0, 0, .23), inset 0 1px rgba(255, 255, 255, .035);
+    text-align: left;
+}
+
+.form-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.selector h2 {
+    margin: 0;
+    color: #eaf2f3;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+.form-status {
+    color: #829aa6;
+    font: 10px/1.4 Consolas, "Courier New", monospace;
+    letter-spacing: .08em;
+    white-space: nowrap;
+}
+
+.form-status::before {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: #71e2b2;
+    box-shadow: 0 0 8px rgba(113, 226, 178, .7);
+    content: "";
+    vertical-align: 1px;
+}
+
+.form-hint {
+    margin: 0 0 18px;
+    color: #8298a4;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #c8d7db;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .035em;
+}
+
+input {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #324958;
+    border-radius: 5px;
+    outline: 0;
+    background: #091521;
+    color: #eff8f8;
+    font: 14px Consolas, "Courier New", monospace;
+    transition: border-color .18s, box-shadow .18s;
+}
+
+input::placeholder {
+    color: #607985;
+}
+
+input:focus {
+    border-color: #63c8cf;
+    box-shadow: 0 0 0 3px rgba(99, 200, 207, .13);
+}
+
+button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 12px;
+    border: 1px solid rgba(190, 245, 239, .28);
+    border-radius: 5px;
+    background: linear-gradient(105deg, #167b87, #249b9e);
+    color: #f4ffff;
+    font: 600 14px "Segoe UI", sans-serif;
+    cursor: pointer;
+    box-shadow: 0 5px 18px rgba(21, 151, 159, .18);
+    transition: filter .18s, transform .18s;
+}
+
+button::after {
+    content: "→";
+    font-size: 18px;
+    line-height: 1;
+}
+
+button:hover {
+    filter: brightness(1.13);
+    transform: translateY(-1px);
+}
+
+button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+}
+
+button:disabled {
+    opacity: .7;
+    cursor: wait;
+    transform: none;
+}
+
+.selection-error {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 126, 121, .25);
+    border-radius: 5px;
+    background: rgba(140, 44, 48, .18);
+    color: #ffaaa5;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.orbital-visual {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(100%, 460px);
+    aspect-ratio: 1;
+    justify-self: center;
+}
+
+.orbital-visual::before,
+.orbital-visual::after {
+    position: absolute;
+    border: 1px solid rgba(116, 181, 196, .13);
+    border-radius: 50%;
+    content: "";
+}
+
+.orbital-visual::before {
+    inset: 5%;
+}
+
+.orbital-visual::after {
+    inset: 14%;
+    border-style: dashed;
+    opacity: .58;
+}
+
+.orbit {
+    position: absolute;
+    width: 79%;
+    height: 35%;
+    border: 1px solid rgba(124, 232, 229, .42);
+    border-radius: 50%;
+    transform: rotate(-34deg);
+    box-shadow: 0 0 22px rgba(61, 183, 197, .08);
+}
+
+.orbit.orbit-two {
+    width: 92%;
+    height: 46%;
+    border-color: rgba(242, 211, 138, .26);
+    transform: rotate(45deg);
+}
+
+.orbit.orbit-three {
+    width: 65%;
+    height: 65%;
+    border-color: rgba(107, 162, 184, .22);
+    transform: rotate(70deg);
+}
+
+.orbit-dot {
+    position: absolute;
+    top: 17%;
+    left: 68%;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #b6ffff;
+    border-radius: 50%;
+    background: #59d9dc;
+    box-shadow: 0 0 13px 4px rgba(89, 217, 220, .4);
+}
+
+.earth {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 43%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 1px solid rgba(145, 225, 233, .52);
+    border-radius: 50%;
+    background: #102b43;
+    box-shadow: 0 0 44px rgba(52, 166, 187, .3), inset -16px -12px 27px rgba(2, 10, 22, .8), inset 8px 7px 18px rgba(166, 247, 241, .16);
+    transform: perspective(700px) rotateX(8deg) rotateY(-5deg) rotateZ(-34deg);
+}
+
+.earth img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    object-position: 0% 42%;
+    transform: scale(1.3);
+}
+
+.earth::before {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    background: radial-gradient(circle at 32% 25%, rgba(194, 255, 250, .34), transparent 42%);
+    content: "";
+    pointer-events: none;
+}
+
+.earth::after {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    background: linear-gradient(130deg, transparent 25%, rgba(1, 8, 18, .72) 100%);
+    content: "";
+    pointer-events: none;
+}
+
+.visual-caption {
+    position: absolute;
+    right: 1%;
+    bottom: 12%;
+    display: grid;
+    gap: 5px;
+    padding: 10px 12px;
+    border: 1px solid rgba(135, 180, 192, .19);
+    border-radius: 5px;
+    background: rgba(9, 21, 33, .78);
+    color: #7e99a5;
+    font: 9px/1.4 Consolas, "Courier New", monospace;
+    letter-spacing: .09em;
+}
+
+.visual-caption strong {
+    color: #d5e5e7;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.visual-coordinate {
+    position: absolute;
+    top: 12%;
+    left: 7%;
+    color: rgba(168, 199, 205, .55);
+    font: 9px/1.6 Consolas, "Courier New", monospace;
+    letter-spacing: .08em;
+}
+
+footer {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1120px;
+    margin: auto auto 0;
+    padding: 16px 28px 22px;
+    border-top: 1px solid rgba(147, 190, 201, .13);
+    color: #718792;
+    font-size: 11px;
+    letter-spacing: .04em;
+}
+
+footer span {
+    color: #a8bbc1;
+}
+
+footer a {
+    color: #91bfc5;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: var(--cyan);
+}
+
+@media (max-width: 760px) {
+    .brand {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .brand-links {
+        justify-content: flex-start;
+    }
+
+    main {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        padding-top: 52px;
+    }
+
+    .orbital-visual {
+        grid-row: 1;
+        width: min(72vw, 330px);
+    }
+
+    .intro {
+        grid-row: 2;
+    }
+
+    footer {
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        padding: 17px 20px;
+    }
+
+    .brand-title {
+        gap: 9px;
+        font-size: 17px;
+    }
+
+    .brand-title i {
+        font-size: 24px;
+    }
+
+    .brand-gem {
+        width: 21px;
+        height: 25px;
+    }
+
+    .brand-links {
+        gap: 8px 13px;
+        font-size: 10px;
+    }
+
+    main {
+        padding: 30px 20px 48px;
+    }
+
+    .intro h1 {
+        font-size: clamp(40px, 12vw, 54px);
+    }
+
+    .intro-copy {
+        font-size: 15px;
+    }
+
+    form {
+        padding: 18px;
+    }
+
+    .form-status {
+        font-size: 9px;
+    }
+
+    .visual-caption {
+        right: -2%;
+        bottom: 8%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}
