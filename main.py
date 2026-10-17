@@ -846,9 +846,9 @@ def create_map_page(catalog_number, satellite_name, position, path_history, sate
             previousLongitude = sample[1];
         }}
         const liveMap = {location_map.get_name()};
-        // Fit the map to the recent path, or center it on the current position if needed.
+        // Center on the recent path without letting its shape change the zoom level.
         if (initialViewPoints.length > 1) {{
-            liveMap.fitBounds(initialViewPoints, {{ padding: [48, 48], maxZoom: 5 }});
+            liveMap.setView(L.latLngBounds(initialViewPoints).getCenter(), 4);
         }} else {{
             liveMap.setView(
                 [{position["latitude"]}, {position["longitude"]}],
