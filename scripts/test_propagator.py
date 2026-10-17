@@ -5,7 +5,6 @@
 from datetime import timedelta
 
 from backend.propagator import propagate_satellite, create_satrec
-from data.satellite_data import get_satellite_data
 from sgp4.conveniences import sat_epoch_datetime
 
 # Test the satellite propagator. Retrieve the satellite information from

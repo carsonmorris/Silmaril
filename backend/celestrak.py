@@ -11,9 +11,8 @@ HEADERS = {
     "User-Agent": "Silmaril/0.1"
 }
 
-
-# Retrieve orbital data for a satellite using its NORAD catalog number.
 def get_satellite_data(catalog_number):
+    """Fetch a satellite's GP JSON record by NORAD number or raise on HTTP errors."""
     params = {
         "CATNR": catalog_number,
         "FORMAT": "JSON"

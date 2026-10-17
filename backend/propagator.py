@@ -8,8 +8,11 @@ from datetime import timezone
 
 from data.satellite_data import get_satellite_data
 
-# The current sgp4 library supports initializing a Satrec directly from an OMM record with omm.initialize().
 def create_satrec(catalog_number):
+    """Build an SGP4 satellite record from the catalog's current OMM data.
+
+    The sgp4 library's OMM initializer maps the catalog record to its Satrec.
+    """
     data = get_satellite_data(catalog_number)
     if not data:
         raise ValueError(
@@ -22,14 +25,16 @@ def create_satrec(catalog_number):
 
 
 
-# Propagate a satellite to a specific UTC datetime. Returns: position: (x, y, z) in kilometers velocity: (vx, vy, vz) in kilometers per second at given time, and the time
-# Note: SGP4 uses radians instead of degrees
-def propagate_satellite(satellite, time): 
+def propagate_satellite(satellite, time):
+    """Propagate at a timezone-aware datetime and return TEME position and velocity.
+
+    Position is in kilometers and velocity is in kilometers per second.
+    """
     if time.tzinfo is None:
         raise ValueError("Time must contain timezone information")
 
     time = time.astimezone(timezone.utc)
-    
+
     # jd is the whole-day component; fr is the fractional-day component.
     jd, fr, = jday(  # Convert calendar date and time to Julian date components.
         time.year, 
@@ -42,6 +47,5 @@ def propagate_satellite(satellite, time):
     error, position, velocity = satellite.sgp4(jd, fr)
     if error != 0:
         raise ValueError(f"Error occurred while propagating satellite: {SGP4_ERRORS[error]}")
-    
-    # Return position xyz and velocity xyz in terms of TEME: True Equator, Mean Equinox. A Cartesian Earth-centered coordinate
+
     return position, velocity

@@ -7,8 +7,12 @@ from math import degrees, sin, cos, pi, sqrt, atan2
 from datetime import timezone
 
 
-# Convert TEME (True Equator, Mean Equinox) coordinates to ECEF (Earth-Centered, Earth-Fixed).
 def teme_to_ecef(position_teme, time):
+    """Rotate a TEME position in kilometers into ECEF at the supplied time.
+
+    TEME means True Equator, Mean Equinox; ECEF means Earth-Centered,
+    Earth-Fixed.
+    """
     # Make sure the time has timezone information
     if time.tzinfo is None:
         raise ValueError("Time must contain timezone information")
@@ -56,8 +60,8 @@ def teme_to_ecef(position_teme, time):
 
     return x_ecef, y_ecef, z_ecef
 
-# Convert ECEF coordinates to geodetic latitude, longitude, and altitude.
 def ecef_to_geodetic(position_ecef):
+    """Convert ECEF kilometers to geodetic latitude/longitude degrees and altitude."""
     # WGS84 ellipsoid parameters
     a = 6378.137 # Semi-major axis (km)
     f = 1 / 298.257223563 # Flattening
