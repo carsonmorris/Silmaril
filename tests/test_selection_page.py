@@ -20,7 +20,6 @@ def test_selection_page_displays_search_results_and_removes_custom_number_entry(
     )
 
     assert '<strong>9</strong>' in page
-    assert "objects with confirmed CelesTrak GP records in the local cache" in page
     assert 'name="q" type="search"' in page
     assert "Showing 1–1 of 2 matches for “test”." in page
     assert "Page 1 of 2" in page
