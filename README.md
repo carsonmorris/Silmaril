@@ -32,11 +32,78 @@ Position calculations have been verified against [AstroViewer's ISS tracker](htt
 
 ## Orbital data
 
+
 The app reads its satellite catalog and cached orbital data from a pre-populated local SQLite database (`data/satellites.db`). Missing orbital records are retrieved from CelesTrak, and cached orbital data older than three hours is refreshed when that satellite is selected.
 
-The landing page reports the number of non-decayed Earth-orbiting objects with a confirmed, non-empty CelesTrak GP record in the local cache; SATCAT's element-availability flag alone does not guarantee that CelesTrak has a record for an object. A view switch lets users return to the featured notable satellites or browse the full cached catalog as a visible, paginated list of 50 objects at a time. Search works by object name or NORAD number, and users track an object by selecting it from the list. An empty response from CelesTrak is not cached and removes any older cached record for that object. The map position is calculated for the current time. A curated notable list includes the ISS, Hubble, Tiangong, NOAA weather satellites, Terra, Aqua, Landsat 9, Sentinel-2A, GOES-16, and Suomi NPP. Objects like the James Webb Space Telescope are not included because CelesTrak does not provide GP orbital elements for them.
+The landing page reports the number of non-decayed Earth-orbiting objects with confirmed CelesTrak GP orbital data in the local database. SATCAT's element-availability flag alone does not guarantee that a GP record is currently available from CelesTrak, so Silmaril only counts objects for which valid orbital data has been retrieved.
 
-## Project structure
+Users can switch between a curated collection of notable satellites and the full cached catalog, which is displayed in pages of 50 objects. Satellites can be searched by name or NORAD catalog number and selected directly from the list for tracking.
+
+When a satellite is selected, Silmaril uses its cached orbital data when available and refreshes stale data from CelesTrak as needed. The satellite's position is then propagated to the current time and displayed on the map.
+
+The notable collection includes the ISS, Hubble Space Telescope, Tiangong, several NOAA weather satellites, Terra, Aqua, Landsat 9, Sentinel-2A, GOES-16, and Suomi NPP. Objects such as the James Webb Space Telescope are excluded because JWST isn't actually an Earth-orbiting satellite in the way the objects Silmaril currently propagates are.
+
+## Getting started
+
+### Requirements
+
+- Python 3.14 or later
+- Internet connection for retrieving and refreshing orbital data from CelesTrak
+
+### Installation
+
+Download the Zip or Clone the repository:
+
+```bash
+git clone https://github.com/carsonmorris/Silmaril.git
+cd silmaril
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate the virtual environment.
+
+**Windows (PowerShell):**
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+**macOS / Linux:**
+
+```bash
+source .venv/bin/activate
+```
+
+Install the required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Running Silmaril
+
+Start the application from the project root:
+
+```bash
+python main.py
+```
+
+Silmaril will start a local web server. 
+
+The included `data/satellites.db` database contains the pre-populated satellite catalog and cached orbital data. Cached orbital data is refreshed from CelesTrak when necessary as satellites are selected.
+
+### Running tests
+
+From the project root:
+
+```bash
+python -m pytest
+```
 
 ```text
 silmaril/

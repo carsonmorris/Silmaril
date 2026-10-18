@@ -477,7 +477,7 @@ def create_selection_page(
                 {error_html}
                 <div class="catalog-summary" aria-label="Available cached orbital records">
                     <strong>{len(satellites):,}</strong>
-                    <span>objects with confirmed CelesTrak GP records in the local cache</span>
+                    <span>objects with confirmed CelesTrak GP (General Perturbations) records in the local cache</span>
                 </div>
                 <p class="form-hint">This is the number of matching, non-empty GP records currently stored locally. Positions are calculated for the current time; orbital data is refreshed from CelesTrak on retrieval when its cache is older than three hours.</p>
                 <form class="catalog-search-form" action="/" method="get">
